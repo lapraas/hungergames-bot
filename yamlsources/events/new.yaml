@@ -1,0 +1,151 @@
+
+# event name is YAML dict key
+hello world:
+  # chance is one of common, uncommon, rare, rarer, mythic, secret, shiny
+  # all chances here are common because these are tests and triggered by hand
+  chance: common
+  # requirements for the event to trigger
+  req:
+    # first entry for this dict is always the main character for the event (the YAML interpreter uses OrderedDicts)
+    # an empty entry means there are no requirements for the character
+    main:
+  # result text, uses @ to reference the shorthand name given to the main character
+  text: |
+    @main says "Hello World!" to a supposedly invisible camera. Thanks for the help, @main!
+
+hello world 2:
+  chance: common
+  req:
+    main:
+    # another character requirement here - since it's not the main character, a hidden requirement is that this character has to be in the same location as the main character
+    other:
+  text: |
+    @main and @other join in chorus to say "Hello world!" to a supposedly invisible camera. Thanks for the help, guys!
+
+tag start:
+  chance: common
+  req:
+    main:
+  text: |
+    A game of tag starts. @main's it!
+  # the results that happen when the event fires
+  res:
+    # this gives the main character a tag named "it"
+    main: tag it
+  
+tag other:
+  chance: common
+  req:
+    # requires that the main character be tagged with "it"
+    main: tag it
+    # requires another nearby character who's an enemy of the main character
+    other: enemy main
+  # this text uses a tag ("they're") that gets conjugated based on the matched character
+  text: |
+    @main tags @other. They're@other it!
+  res:
+    # removes the "it" tag from the main character
+    main: untag it
+    # adds an "it" tag to the other character
+    other: tag it
+
+give:
+  chance: common
+  req:
+    # create makes an UNOWNED item that gets given to a character in the results
+    # "ANY" is a tag that will bypass all other tags and match any possible item
+    main: create item ANY
+  # to use the item's name, prepend the shorthand with & (and "a" if an article is necessary)
+  text: |
+    All of a sudden, a&item appears in front of @main. They@main pick@main it up without asking any questions.
+  res:
+    # gives the created item to the main character
+    main: give item
+
+team up:
+  chance: common
+  req:
+    main:
+    # a relationship requirement - only character who are an enemy of the character shorthanded "main" will be matched
+    toally: enemy main
+  text: |
+    @main finds @toally. Instead of brutally murdering them@toally, @main decides to form an alliance with them@toally.
+  res:
+    # ally result - the "toally" character and the "main" character will be on the same alliance
+    # if "main" is already in an alliance, "toally" joins that even if they're in an alliance
+    # otherwise, if "toally" is in an alliance, "main" joins that
+    # otherwise, a new alliance is created
+    main: ally toally
+
+break up:
+  chance: common
+  req:
+    main:
+    # relationship requirement for allied character
+    ally: ally main
+  text: |
+    @main finds out that @ally likes 100 Gecs. Immediately, they@main part@main ways.
+  res:
+    # leave result - the character leaves whatever alliance they are in
+    main: leave
+
+training:
+  chance: common
+  req:
+    # an item requirement - only characters that possess an item tagged with "weapon" can be matched (and the item is stored in the shorthand "weap")
+    main: item weap weapon
+  text: |
+    @main decides to train with their@main &weap.
+
+eat:
+  chance: common
+  req:
+    main: item mFood food
+  text: |
+    @main gets hungry and eats their@main &mFood.
+  res:
+    # consume result - the matched item will be removed from main's inventory
+    # (TO FIX - CONSUME PROBABLY BREAKS WHEN USED ON THE WRONG CHARACTER)
+    main: consume mFood
+
+location:
+  chance: common
+  req:
+    # location requirement - matched character must be in a zone called "Center"
+    main: in Center
+  text: |
+    @main runs away from the cornucopia.
+  res:
+    # location result - moves "main" to a random zone connected to the one they're currently in
+    main: move
+    
+goto Center:
+  chance: common
+  req:
+    main:
+  text: |
+    A portal just big enough for @main to fit through opens before them@main. They@main enter@main it, finding themself@main back in the center of the arena.
+  res:
+    # location result can be given a specific zone name, and the character will be moved there instead of a random place
+    main: move Center
+
+sparring:
+  chance: common
+  req:
+    # a bit more complex of a requirement, both characters have to have a "weapon" item
+    main: item mainWeap weapon
+    ally: ally main, item allyWeap weapon
+  text: |
+    @main and @ally take some time to spar with each other, @main taking to their@main &mainWeap and @ally taking to their@ally &allyWeap.
+  res:
+    main: tag empowered
+    ally: tag empowered
+
+armed battle:
+  chance: common
+  req:
+    # another complex requirement
+    main: item mWeap weapon
+    enemy: enemy main, item eWeap weapon
+  text: |
+    @main and @enemy spot each other. @main pulls out their@main &mWeap, @enemy pulls out their@enemy &eWeap, and both advance. A loud battle ensues.

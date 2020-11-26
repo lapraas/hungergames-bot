@@ -1,0 +1,92 @@
+
+hello world:
+  chance: common
+  in:
+    chars: $main
+  out:
+    text: $main says "Hello World!" to a supposedly invisible camera. Thanks for the help, $main!
+    
+chars in:
+  chance: common
+  in:
+    chars: $1 has(weapon)->$weapon, $partner ally($1), $enemy enemy($1),
+  out:
+    text: Selected $1, $partner, and $enemy
+  
+enemy:
+  chance: common
+  in:
+    chars: $1, $enemy enemy
+  out:
+    text: $1 finds $enemy. s$1 readies p$1 fists and fights o$enemy.
+    
+sub-event:
+  chance: common
+  in:
+    chars: $1, $enemy enemy
+  out:
+    text: $1 finds $enemy.
+  
+  sub:
+    friendly:
+      chance: common
+      out:
+        text: s$1 says "Hi" to o$enemy.
+    aggressive:
+      chance: rarer
+      out:
+        text: s$1 decides to fight o$enemy.
+
+new ally:
+  chance: common
+  in:
+    chars: $1, $newally enemy
+  out:
+    text: $1 comes across $newally. Feeling friendly, s$1 decides to ally with o$newally.
+    ally: $1 $newally
+  
+new enemy:
+  chance: common
+  in:
+    chars: $1, $ally ally
+  out:
+    text: $1 finds out $ally likes 100 Gecs. s$1 ends their alliance.
+    enemy: $ally
+
+enemy of my enemy:
+  chance: common
+  in:
+    chars: $1, $enemy enemy, $eoe enemy enemy($enemy)
+  out:
+    text: $1 finds $enemy being stalked by $eoe. Just as $eoe is about to kill $enemy, $1 intervenes and fights o$eoe.
+  sub:
+    success:
+      chance: common
+      out:
+        status: $eoe killed
+        text: After an intense struggle, $1 comes out on top.
+      sub:
+        allies:
+          chance: common
+          out:
+            text: $enemy is very grateful to $1. They decide to team up.
+            ally: $1 f$enemy
+        run:
+          chance: mythic
+          out:
+            text: $enemy takes the opportunity to run away, silently thanking o$1.
+    failure:
+      chance: rare
+      out:
+        status: $1 killed
+        text: After an intense struggle, $eoe miraculously comes out on top.
+      sub:
+        run:
+          chance: common
+          out:
+            text: $enemy runs away from the scene with their life.
+        fight:
+          chance: uncommon
+          out:
+            status: $eoe killed
+            text: While $eoe is distracted, $enemy avenges $1 in brutal fashion.
