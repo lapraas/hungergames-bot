@@ -54,7 +54,7 @@ class Game:
         
         return [("Trigger failed", [])]
     
-    def trigger(self, char: Character, event: Event):
+    def trigger(self, char: Character, event: Event) -> list[tuple[str, list[tuple[Character, str]]]]:
         state, subEvents = event.trigger()
         textResults: list[tuple[str, list[tuple[Character, str]]]] = [(state.addReplacedText(event.text), state.getResTexts())]
         #print(textResults)
@@ -85,11 +85,13 @@ class Game:
             count = count + event.getChance()
         raise Exception(f"Invalid choice when choosing from events ({choice} out of {totalChance})")
     
-    def round(self):
+    def round(self) -> list[tuple[Character, list[tuple[str, list[tuple[Character, str]]]]]]:
+        allresults = []
         for tribute in self.tributes:
             if not tribute.isAlive():
                 continue
             event = self.chooseFromEvents(tribute)
-            self.trigger(tribute, event)
+            allresults.append((tribute, self.trigger(tribute, event)))
+        return allresults
             
         

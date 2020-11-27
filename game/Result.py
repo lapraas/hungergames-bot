@@ -120,6 +120,7 @@ class KillRes(EventPart):
     
     def do(self, char: Character, state: State):
         char.kill()
+        return f"killed: {char.string()}"
 
 class ReviveRes(EventPart):
     args = ["type"]
@@ -130,6 +131,7 @@ class ReviveRes(EventPart):
     
     def do(self, char: Character, state: State):
         char.revive()
+        return f"revived: {char.string()}"
 
 ALLRESCLASSES: list[Type[EventPart]] = [
     TagRes,

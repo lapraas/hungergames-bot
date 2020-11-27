@@ -33,10 +33,7 @@ class HGCog(commands.Cog):
             embed.set_thumbnail(url=url)
         return embed
     
-    def buildEmbed(self, mcName: str, resTexts: list[tuple[str, list[tuple[Character, str]]]]) -> list[Embed]:
-        mc = self.game.getTributeByName(mcName)
-        if not mc: return [Embed(title="Error", description=f"Main character {mcName} not found")]
-        
+    def buildEmbed(self, mc: Character, resTexts: list[tuple[str, list[tuple[Character, str]]]]) -> list[Embed]:
         embeds = []
         for eventText, ress in resTexts:
             embed = HGCog.makeCharEmbed(mc, "Event", eventText, EVENTGREEN)
@@ -101,9 +98,23 @@ class HGCog(commands.Cog):
         if not args: return
         charName, eventName = args
         resTexts = self.game.triggerByName(charName, eventName)
-        embeds = self.buildEmbed(charName, resTexts)
+        char = self.game.getTributeByName(charName)
+        embeds = self.buildEmbed(char, resTexts)
         for embed in embeds:
             await ctx.send(embed=embed)
+    
+    @commands.command()
+    async def round(self, ctx: Context):
+        """ Executes a game round. """
+        charsAndResults = self.game.round()
+        embeds = []
+        for char, resTexts in charsAndResults:
+            embeds += self.buildEmbed(char, resTexts)
+        
+        await ctx.send(embed=Embed(title="Round start"))
+        for embed in embeds:
+            await ctx.send(embed=embed)
+        await ctx.send(embed=Embed(title="Round end"))
     
     @commands.command()
     async def give(self, ctx: Context, *args: str):
