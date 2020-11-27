@@ -6,10 +6,10 @@ from random import choice
 import re
 from typing import Callable, Type, Union
 
-from Character import Character
-from Item import Item, Item
-from Map import Map
-from State import State
+from game.Character import Character
+from game.Item import Item, Item
+from game.Map import Map
+from game.State import State
     
 class Valids:
     def __init__(self, allItems: list[Item], map: Map):

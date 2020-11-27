@@ -1,7 +1,7 @@
 
 # id 768553973627224097
 
-from loads import defaultLoad
+from game.loads import defaultLoad
 
 GAME = defaultLoad()
 

@@ -5,11 +5,11 @@ from typing import Callable, Optional
 from ruamel.yaml import YAML
 yaml = YAML()
 
-from Character import buildCharactersFromYaml
-from Event import buildEventsFromYaml
-from Game import Game
-from Item import buildItemsFromYaml
-from Map import buildMapFromYaml, buildZoneEventPaths
+from game.Character import buildCharactersFromYaml
+from game.Event import buildEventsFromYaml
+from game.Game import Game
+from game.Item import buildItemsFromYaml
+from game.Map import buildMapFromYaml, buildZoneEventPaths
 
 def loadAll(path: str, fileNames: Optional[list[str]], buildFun: Callable, args: list=None):
     dex: list = []

@@ -4,13 +4,13 @@ from random import choice
 import re
 from typing import Union
 
-from Character import Character
-from Item import Item, Item
-from Map import Map
-from Requirement import ALLREQCLASSES
-from Result import ALLRESCLASSES
-from State import State
-from Valids import Suite, Valids, validateText
+from game.Character import Character
+from game.Item import Item, Item
+from game.Map import Map
+from game.Requirement import ALLREQCLASSES
+from game.Result import ALLRESCLASSES
+from game.State import State
+from game.Valids import Suite, Valids, validateText
 
 RARITIES = {
     "common": 30,

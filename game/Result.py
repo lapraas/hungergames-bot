@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from typing import Type
 
-from Item import Item
-from Character import Character
-from State import State
-from Valids import EventPart, Valids, validateCharShort, validateItemShort, validateTagName, validateZoneName
+from game.Item import Item
+from game.Character import Character
+from game.State import State
+from game.Valids import EventPart, Valids, validateCharShort, validateItemShort, validateTagName, validateZoneName
 
 class TagRes(EventPart):
     args = ["type", "tag name"]

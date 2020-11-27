@@ -1,11 +1,11 @@
 
 from random import randint
 
-from Character import Character
-from Event import Event
-from Item import Item, Item
-from Map import Map
-from State import State
+from game.Character import Character
+from game.Event import Event
+from game.Item import Item, Item
+from game.Map import Map
+from game.State import State
 
 
 class Game:

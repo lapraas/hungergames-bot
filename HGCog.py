@@ -3,8 +3,8 @@ from discord.embeds import Embed
 from discord.ext import commands
 from discord.ext.commands.context import Context
 
-from Character import Character, yamlCharacter
-from loads import add, defaultLoad
+from game.Character import Character, yamlCharacter
+from game.loads import add, defaultLoad
 
 class HGCog(commands.Cog):
     def __init__(self, bot):

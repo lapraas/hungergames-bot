@@ -2,8 +2,8 @@
 import re
 from typing import Union
 
-from Character import Character
-from Item import Item
+from game.Character import Character
+from game.Item import Item
 
 class State:
     def __init__(self, charsPool: dict[str, Character]=None, itemsPool: dict[str, Character]=None):

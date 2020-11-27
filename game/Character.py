@@ -5,8 +5,8 @@ p = inflect.engine()
 import re
 
 from typing import Optional
-from Item import Item
-from Map import Zone
+from game.Item import Item
+from game.Map import Zone
 
 def _match_url(url):
     regex = re.compile(

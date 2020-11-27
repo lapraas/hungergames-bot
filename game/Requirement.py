@@ -4,10 +4,10 @@ from random import choice
 
 from typing import Type
 
-from Character import Character
-from Item import Item, Item
-from State import State
-from Valids import EventPart, Valids, addItemShortToValids, addTagNameToValids, validateCharShort, validateItemTag, validateZoneName
+from game.Character import Character
+from game.Item import Item, Item
+from game.State import State
+from game.Valids import EventPart, Valids, addItemShortToValids, addTagNameToValids, validateCharShort, validateItemTag, validateZoneName
 
 class AloneReq(EventPart):
     ALONE = "alone"
