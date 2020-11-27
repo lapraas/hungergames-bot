@@ -10,14 +10,19 @@ class State:
         self.charsPool = charsPool if charsPool else {}
         self.itemsPool = itemsPool if itemsPool else {}
         self.resTexts: list[Union[tuple[Character, str], str]] = []
+        self.mainCharShort: str = None
     
     def setChar(self, charShort: str, char: Character):
         self.charsPool[charShort] = char
+        if not self.mainCharShort:
+            self.mainCharShort = charShort
     
     def setItem(self, itemShort: str, item: Item):
         self.itemsPool[itemShort] = item
     
     def getChar(self, charShort: str):
+        if not charShort:
+            return self.getChar(self.mainCharShort)
         return self.charsPool[charShort]
     
     def doesCharExist(self, char: Character):
@@ -54,5 +59,5 @@ class State:
         
         return text
     
-    def hasMainCharacter(self):
-        return bool(self.charsPool)
+    def getMainCharacter(self):
+        return self.mainCharShort

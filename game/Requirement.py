@@ -9,6 +9,44 @@ from game.Item import Item, Item
 from game.State import State
 from game.Valids import EventPart, Valids, addItemShortToValids, addTagNameToValids, validateCharShort, validateItemTag, validateZoneName
 
+
+class NearbyReq(EventPart):
+    NEARBY = "nearby"
+    ANYDISTANCE = "anydistance"
+    
+    args = ["nearby state (type)", "target char shorthand?"]
+    matches = [NEARBY, ANYDISTANCE]
+    
+    def __init__(self, valids: Valids, *args: str):
+        if len(args) == 2 and args[0] == NearbyReq.NEARBY:
+            self.state, self.targetShort = args
+        else:
+            self.state, = args
+            self.targetShort = None
+    
+    def do(self, char: Character, state: State) -> bool:
+        if self.state == NearbyReq.NEARBY:
+            target = state.getChar(self.targetShort)
+            return char.isNearby(target)
+        else:
+            return True
+
+class AliveReq(EventPart):
+    ALIVE = "alive"
+    DEAD = "dead"
+    
+    args = ["alive state (type)"]
+    matches = [ALIVE, DEAD]
+    
+    def __init__(self, valids: Valids, *args: str):
+        self.aState, = args
+    
+    def do(self, char: Character, state: State) -> bool:
+        if self.aState == AliveReq.ALIVE:
+            return char.isAlive()
+        else:
+            return not char.isAlive()
+
 class AloneReq(EventPart):
     ALONE = "alone"
     ALLIED = "allied"
@@ -22,9 +60,9 @@ class AloneReq(EventPart):
         self.state = state
     
     def do(self, char: Character, state: State) -> bool:
-        if self.state == "alone" and char.isAlone():
+        if self.state == AloneReq.ALONE and char.isAlone():
             return True
-        if self.state == "allied" and not char.isAlone():
+        if self.state == AloneReq.ALLIED and not char.isAlone():
             return True
         return False
 
@@ -134,6 +172,8 @@ class LocationReq(EventPart):
         return char.isIn(self.locName)
 
 ALLREQCLASSES: list[Type[EventPart]] = [
+    NearbyReq,
+    AliveReq,
     AloneReq,
     RelationReq,
     TagReq,

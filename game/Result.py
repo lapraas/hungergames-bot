@@ -111,6 +111,26 @@ class MoveRes(EventPart):
             char.moveRandom()
         return f"moved to zone: {char.getLocation().name}"
 
+class KillRes(EventPart):
+    args = ["type"]
+    matches = ["kill"]
+    
+    def __init__(self, valids: Valids, *args: str):
+        pass
+    
+    def do(self, char: Character, state: State):
+        char.kill()
+
+class ReviveRes(EventPart):
+    args = ["type"]
+    matches = ["revive"]
+    
+    def __init__(self, valids: Valids, *args: str):
+        pass
+    
+    def do(self, char: Character, state: State):
+        char.revive()
+
 ALLRESCLASSES: list[Type[EventPart]] = [
     TagRes,
     UntagRes,
@@ -118,5 +138,7 @@ ALLRESCLASSES: list[Type[EventPart]] = [
     AllyRes,
     LeaveRes,
     ConsumeRes,
-    MoveRes
+    MoveRes,
+    KillRes,
+    ReviveRes
 ]

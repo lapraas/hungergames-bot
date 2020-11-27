@@ -84,3 +84,12 @@ class Game:
                 return event
             count = count + event.getChance()
         raise Exception(f"Invalid choice when choosing from events ({choice} out of {totalChance})")
+    
+    def round(self):
+        for tribute in self.tributes:
+            if not tribute.isAlive():
+                continue
+            event = self.chooseFromEvents(tribute)
+            self.trigger(tribute, event)
+            
+        

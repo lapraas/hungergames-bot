@@ -22,6 +22,33 @@ hello world 2:
   text: |
     @main and @other join in chorus to say "Hello world!" to a supposedly invisible camera. Thanks for the help, guys!
 
+long distance call:
+  chance: common
+  req:
+    main:
+    other: anydistance
+  text: |
+    @main whips out their cell phone and calls @other.
+  
+kill:
+  chance: common
+  req:
+    main:
+  text: |
+    @main keels over and dies for no reason.
+  res:
+    main: kill
+
+commune with spirits:
+  chance: common
+  req:
+    main:
+    other: dead
+  text: |
+    @main prepares a pentagram and tries to summon @other. They@other appear@other as a ghost before them, and the two have a heartwarming conversation. After a while, @other decide@other they want to live again, and it is so. They@other team@other up with @main.
+  res:
+    other: revive, ally main
+
 tag start:
   chance: common
   req:

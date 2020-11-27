@@ -1,13 +1,16 @@
 
 from __future__ import annotations
+from collections import defaultdict
 from random import choice
 import re
 from typing import Union
 
+from discord.ext.commands.core import check
+
 from game.Character import Character
 from game.Item import Item, Item
 from game.Map import Map
-from game.Requirement import ALLREQCLASSES
+from game.Requirement import ALLREQCLASSES, AliveReq, NearbyReq
 from game.Result import ALLRESCLASSES
 from game.State import State
 from game.Valids import Suite, Valids, validateText
@@ -21,6 +24,9 @@ RARITIES = {
     "secret": 3,
     "shiny": 1
 }
+
+defaultAlive = AliveReq(None, "alive")
+defualtNearby = NearbyReq(None, "nearby")
 
 class Event:
     def __init__(self, name: str, chance: int, text: str, req: list[Suite], res: list[Suite], sub: list[Event]):
@@ -49,26 +55,35 @@ class Event:
             self.state = state
         
         if not self.req:
-            if not state.hasMainCharacter():
+            if not state.getMainCharacter():
                 raise Exception("There were no requirements for this non-sub-event")
             else:
                 return True
+        
         mainReq = self.req[0]
-        if not mainReq.check(mainChar, self.state):
-            return False
+        if (not any([type(req) == AliveReq for req in mainReq.eventParts])):
+            if not defaultAlive.do(mainChar, self.state): return False
+        
+        if not mainReq.check(mainChar, self.state): return False
             
         self.state.setChar(mainReq.getCharShort(), mainChar)
         
-        for req in self.req[1:]:
+        for reqSuite in self.req[1:]:
             possibleChars: list[Character] = []
+            checkAlive = not any([type(req) == AliveReq for req in reqSuite.eventParts])
+            checkNearby = not any([type(req) == NearbyReq for req in reqSuite.eventParts])
             for char in otherChars:
                 if self.state.doesCharExist(char): continue
-                if req.check(char, self.state):
+                
+                if checkAlive and not defaultAlive.do(char, self.state): continue
+                if checkNearby and not defualtNearby.do(char, self.state): continue
+                
+                if reqSuite.check(char, self.state):
                     possibleChars.append(char)
             if not possibleChars:
                 return False
                 
-            self.state.setChar(req.getCharShort(),  choice(possibleChars))
+            self.state.setChar(reqSuite.getCharShort(),  choice(possibleChars))
             
         return True
     

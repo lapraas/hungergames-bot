@@ -29,6 +29,7 @@ class Character:
         self.tags: list[str] = []
         self.location: Zone = None
         self.alliance: list[Character] = []
+        self.alive: bool = True
     
     def __repr__(self):
         return f"Character {self.name}"
@@ -36,11 +37,15 @@ class Character:
     def __str__(self):
         return self.string()
     
+    def reset(self):
+        self.items = []
+        self.tags = []
+        self.location = None
+        self.alliance = []
+        self.alive = True
+    
     def getPicture(self):
         return self.imgSrc
-    
-    def getIsDead(self):
-        return "killed" in self.tags
         
     def string(self, tag: str = None) -> str:
         toRet = self.name
@@ -78,6 +83,15 @@ class Character:
     def hasTag(self, tag: str):
         return tag in self.tags
     
+    def isAlive(self):
+        return self.alive
+    
+    def kill(self):
+        self.alive = False
+    
+    def revive(self):
+        self.alive = True
+    
     def copyAndGiveItem(self, item: Item):
         copy = item.copy()
         self.items.append(copy)
@@ -103,7 +117,7 @@ class Character:
     def isIn(self, loc: str) -> bool:
         return self.location.name == loc
     
-    def isNear(self, other: Character):
+    def isNearby(self, other: Character):
         return self.getLocation() == other.getLocation()
     
     def move(self, newLocation: str):
@@ -147,6 +161,9 @@ class Character:
     def getAllianceStr(self):
         if not self.alliance: return "No alliance"
         return ", ".join([ally.string() for ally in self.alliance])
+    
+    def getAliveStr(self):
+        return "Alive" if self.alive else "Dead"
 
 def buildCharactersFromYaml(yaml: dict[str, tuple[str, str]], *_):
     chars = []
