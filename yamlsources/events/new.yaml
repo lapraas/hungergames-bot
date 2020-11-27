@@ -45,7 +45,7 @@ commune with spirits:
     main:
     other: dead
   text: |
-    @main prepares a pentagram and tries to summon @other. They@other appear@other as a ghost before them, and the two have a heartwarming conversation. After a while, @other decide@other they want to live again, and it is so. They@other team@other up with @main.
+    @main prepares a pentagram and tries to summon @other. They@other appear@other as a ghost before them@main, and the two have a heartwarming conversation. After a while, @other decide@other they want to live again, and it is so. They@other team@other up with @main.
   res:
     other: revive, ally main
 
@@ -96,7 +96,7 @@ team up:
     # a relationship requirement - only character who are an enemy of the character shorthanded "main" will be matched
     toally: enemy main
   text: |
-    @main finds @toally. Instead of brutally murdering them@toally, @main decides to form an alliance with them@toally.
+    @main finds @toally. Instead of brutally murdering them@toally, @main decides to form an alliance.
   res:
     # ally result - the "toally" character and the "main" character will be on the same alliance
     # if "main" is already in an alliance, "toally" joins that even if they're in an alliance

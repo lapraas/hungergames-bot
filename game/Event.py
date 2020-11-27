@@ -1,6 +1,6 @@
 
 from __future__ import annotations
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from random import choice
 import re
 from typing import Union
@@ -22,7 +22,8 @@ RARITIES = {
     "rarer": 10,
     "mythic": 5,
     "secret": 3,
-    "shiny": 1
+    "shiny": 1,
+    "DEFAULT": 0
 }
 
 defaultAlive = AliveReq(None, "alive")
@@ -33,9 +34,10 @@ class Event:
         self.name = name
         self.chance = chance
         self.text = text
-        self.req = req
-        self.res = res
+        self.reqSuites = req
+        self.resSuites = res
         self.sub = sub
+        self.triggerCts: dict[Character, int] = {}
     
     def __repr__(self):
         return f"Event {self.name}"
@@ -49,46 +51,98 @@ class Event:
     def getChance(self):
         return RARITIES[self.chance]
     
-    def prepare(self, mainChar: Character, otherChars: list[Character], state: State=None):
-        self.state = State()
-        if state:
-            self.state = state
+    def prepare(self, mainChar: Character, otherChars: list[Character], state: State=None) -> bool:
+        """
+            Prepares this Event to be triggered, assigning Characters to the Event State if they match.
+            If any of the requirements aren't met, returns False, otherwise returns True.
+            """
+        self.state = State(self.triggerCts) if not state else state
         
-        if not self.req:
-            if not state.getMainCharacter():
-                raise Exception("There were no requirements for this non-sub-event")
-            else:
-                return True
+        if not self.state.doesCharExist(mainChar):
+            return self.prepareBase(mainChar, otherChars)
+        else:
+            return self.prepareSub(otherChars)
+    
+    def prepareSub(self, otherChars: list[Character]):
+        """ Prepares a sub-event. """
+        # Sub-events can have empty requirements
+        if not self.reqSuites: return True
         
-        mainReq = self.req[0]
-        if (not any([type(req) == AliveReq for req in mainReq.eventParts])):
-            if not defaultAlive.do(mainChar, self.state): return False
-        
-        if not mainReq.check(mainChar, self.state): return False
+        for reqSuite in self.reqSuites:
+            # There might already be a character in the Event State
+            short = reqSuite.getCharShort()
+            matchedChar = self.state.getChar(short)
             
-        self.state.setChar(mainReq.getCharShort(), mainChar)
-        
-        for reqSuite in self.req[1:]:
-            possibleChars: list[Character] = []
-            checkAlive = not any([type(req) == AliveReq for req in reqSuite.eventParts])
-            checkNearby = not any([type(req) == NearbyReq for req in reqSuite.eventParts])
-            for char in otherChars:
-                if self.state.doesCharExist(char): continue
-                
-                if checkAlive and not defaultAlive.do(char, self.state): continue
-                if checkNearby and not defualtNearby.do(char, self.state): continue
-                
-                if reqSuite.check(char, self.state):
-                    possibleChars.append(char)
-            if not possibleChars:
+            # If that's not the case, we want to match a new Character like normal
+            if not matchedChar:
+                matchedChar = self.matchCharacter(reqSuite, otherChars)
+                if not matchedChar: return False
+                self.state.setChar(reqSuite.getCharShort(), matchedChar)
+                continue
+            # If that is the case, we want to check the preexisting Character against the new requirements
+            if not reqSuite.check(matchedChar, self.state):
                 return False
-                
-            self.state.setChar(reqSuite.getCharShort(),  choice(possibleChars))
-            
+        
         return True
     
+    def prepareBase(self, mainChar: Character, otherChars: list[Character]):
+        """ Prepares a base-level event. """
+        # Main Character's requirements are always the first in the list of Suites
+        mainReqSuite = self.reqSuites[0]
+        # Check to see if the mainChar is alive, but only if there are no AliveReqs in the Suite
+        if (not any([type(req) == AliveReq for req in mainReqSuite.eventParts])):
+            if not defaultAlive.do(mainChar, self.state): return False
+        
+        # Check the rest of the main's requirements
+        if not mainReqSuite.check(mainChar, self.state): return False
+        
+        # If the main character matches, we put them into the State
+        self.state.setChar(mainReqSuite.getCharShort(), mainChar)
+        
+        # All other requirement suites match other characters from the given list of all other Characters
+        for reqSuite in self.reqSuites[1:]:
+            matchedChar = self.matchCharacter(reqSuite, otherChars)
+            if not matchedChar: return False
+            self.state.setChar(reqSuite.getCharShort(), matchedChar)
+        return True
+    
+    def matchCharacter(self, reqSuite: Suite, otherChars: list[Character]):
+        # Collect a list of all matched Characters
+        matchedChars: list[Character] = []
+        
+        # Boolean values that determine whether or not we're doing the default checks
+        checkAlive = not any([type(req) == AliveReq for req in reqSuite.eventParts])
+        checkNearby = not any([type(req) == NearbyReq for req in reqSuite.eventParts])
+        
+        for char in otherChars:
+            # Can't match the same Character twice
+            if self.state.doesCharExist(char): continue
+            # Default checks if necessary
+            if checkAlive and not defaultAlive.do(char, self.state): continue
+            if checkNearby and not defualtNearby.do(char, self.state): continue
+            # Full Suite check, adding Character if it matches
+            if reqSuite.check(char, self.state):
+                matchedChars.append(char)
+        if not matchedChars:
+            return False
+        
+        # Assign a random Character from the matcheed Characters to the State
+        return choice(matchedChars)
+    
+    def incrementTriggers(self, char: Character):
+        """ Increments the number of times this Event has been triggered by a certain Character. """
+        # Count the number of triggers that have happened to the main Character
+        if not char in self.triggerCts:
+            self.triggerCts[char] = 0
+        self.triggerCts[char] += 1
+    
     def trigger(self):
-        for resSuite in self.res:
+        """ Performs the Event's effects on the Characters given to the State. """
+        mc = self.state.getChar()
+        self.incrementTriggers(mc)
+        
+        # Do each Suite's actions to the State's Characters
+        for resSuite in self.resSuites:
             char = self.state.getChar(resSuite.getCharShort())
             for resText in resSuite.perform(char, self.state):
                 self.state.addResText(char, resText)
@@ -99,20 +153,25 @@ class EventLoadException(Exception):
         super().__init__(f"in event \"{eventName}\", {message}")
 
 def _loadEvent(name: str, data: dict[str, Union[int, str, dict[str, str]]], valids: Valids):
+    """ Builds an Event from a YAML object, using a unique Valids object.
+        Raises any Exceptions that the Event encounters in its creation as EventLoadExceptions. """
     chance = data.get("chance")
     if not chance:
-        raise EventLoadException(name, "chance parameter not found")
+        raise EventLoadException(name, "`chance` value not found")
     
     text = data.get("text")
     if not text:
-        raise EventLoadException(name, "text parameter not found")
+        raise EventLoadException(name, "`text` value not found")
     if text[-1] == "\n":
         text = text[:-1]
     
     commaPat = re.compile(r"\s*,\s*")
     spacePat = re.compile(r"\s+")
     req = data.get("req")
-    if not req: req = []
+    if not req:
+        req = {}
+    if type(req) == str:
+        raise EventLoadException(name, f"bad value for `req` was found: \"{req}\"")
     reqSuites: list[Suite] = []
     
     for charShort in req:
@@ -157,6 +216,7 @@ def _loadEvent(name: str, data: dict[str, Union[int, str, dict[str, str]]], vali
     return Event(name, chance, text, reqSuites, resSuites, sub)
 
 def buildEventsFromYaml(yaml: dict[str, dict[str, dict[str, str]]], allItems: list[Item], map: Map):
+    """ Builds a list of events from a YAML object. """
     events: list[Event] = []
     for name in yaml:
         data = yaml[name]

@@ -15,3 +15,22 @@ hello world sub:
       chance: common
       text: |
         They@main decide@main to say "Hello, world!" to the one on the right. Thanks for the help, @main!
+
+oneoff sub:
+  chance: common
+  req:
+    main:
+  text: |
+    @main spots a camera hidden in the trunk of a nearby tree.
+  
+  sub:
+    smash:
+      chance: common
+      req:
+        main: limit total 1
+      text: |
+        They@main smash@main it, rendering it useless.
+    default:
+      chance: DEFAULT
+      text: |
+        The camera has already been destroyed; they@main don't need to do anything to it.

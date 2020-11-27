@@ -140,10 +140,11 @@ class HGCog(commands.Cog):
         if not char: return
         
         embed = HGCog.makeCharEmbed(char, color=CHARINFOBLUE)
-        embed.add_field(name="Location", value=char.getLocationStr())
-        embed.add_field(name="Items", value=char.getItemsStr())
-        embed.add_field(name="Tags", value=char.getTagsStr())
-        embed.add_field(name="Alliance", value=char.getAllianceStr())
+        embed.add_field(name="Location:", value=char.getLocationStr())
+        embed.add_field(name="Items:", value=char.getItemsStr())
+        embed.add_field(name="Tags:", value=char.getTagsStr())
+        embed.add_field(name="Alliance:", value=char.getAllianceStr())
+        embed.add_field(name="Status:", value=char.getAliveStr())
         
         url = char.getPicture()
         if url:

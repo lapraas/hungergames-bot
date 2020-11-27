@@ -37,6 +37,26 @@ class Character:
     def __str__(self):
         return self.string()
     
+    def __hash__(self) -> int:
+        return hash((
+            self.name,
+            self.imgSrc,
+            self.subj, self.obj, self.plur1, self.plur2, self.flex, self.plural
+        ))
+    
+    def __eq__(self, o: object) -> bool:
+        if not type(o) == Character: return False
+        return all(
+            self.name == o.name,
+            self.imgSrc == o.imgSrc,
+            self.subj == o.subj, self.obj == o.obj, self.plur1 == o.plur1, self.plur2 == o.plur2, self.flex == o.flex, self.plural == o.plural,
+            self.items == o.items,
+            self.tags == o.tags,
+            self.location == o.location,
+            # again including alliance would create an infinite recursion
+            self.alive == o.alive
+        )
+    
     def reset(self):
         self.items = []
         self.tags = []
@@ -75,6 +95,7 @@ class Character:
         return toRet
     
     def addTag(self, tag: str):
+        if self.hasTag(tag): return
         self.tags.append(tag)
     
     def removeTag(self, tag: str):
@@ -156,7 +177,7 @@ class Character:
     
     def getTagsStr(self):
         if not self.tags: return "No tags"
-        return ", ".join(self.tags).capitalize()
+        return ", ".join(self.tags)
     
     def getAllianceStr(self):
         if not self.alliance: return "No alliance"

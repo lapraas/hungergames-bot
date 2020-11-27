@@ -7,7 +7,7 @@ from typing import Type
 from game.Character import Character
 from game.Item import Item, Item
 from game.State import State
-from game.Valids import EventPart, Valids, addItemShortToValids, addTagNameToValids, validateCharShort, validateItemTag, validateZoneName
+from game.Valids import EventPart, Valids, addItemShortToValids, addTagNameToValids, validateCharShort, validateIsInt, validateItemTag, validateZoneName
 
 
 class NearbyReq(EventPart):
@@ -54,7 +54,7 @@ class AloneReq(EventPart):
     args = ["type"]
     matches = [ALONE, ALLIED]
 
-    def __init__(self, _, *args: str):
+    def __init__(self, valids: Valids, *args: str):
         state, = args
         
         self.state = state
@@ -171,6 +171,24 @@ class LocationReq(EventPart):
     def do(self, char: Character, state: State) -> bool:
         return char.isIn(self.locName)
 
+class LimitReq(EventPart):
+    TOTAL = "total"
+    PERCHAR = "perchar"
+    
+    args = ["type", "count type", "trigger count"]
+    matches = ["limit"]
+    
+    def __init__(self, valids: Valids, *args: str):
+        _, self.cType, self.count = args
+        validateIsInt(self.count)
+        self.count = int(self.count)
+    
+    def do(self, char: Character, state: State) -> bool:
+        if self.cType == LimitReq.PERCHAR:
+            return state.getTriggersFor(char) <= self.count
+        else:
+            return state.getTotalTriggers() <= self.count
+
 ALLREQCLASSES: list[Type[EventPart]] = [
     NearbyReq,
     AliveReq,
@@ -179,5 +197,6 @@ ALLREQCLASSES: list[Type[EventPart]] = [
     TagReq,
     ItemReq,
     CreateReq,
-    LocationReq
+    LocationReq,
+    LimitReq
 ]

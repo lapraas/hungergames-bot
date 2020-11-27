@@ -130,6 +130,11 @@ def validate(fun: Callable, name: str, errName: str):
     if not fun(name):
         raise EventPartException(f"Encountered an invalid {errName}: `{name}`")
 
+def validateIsInt(arg: str):
+    for let in arg:
+        if let not in "1234567890":
+            raise EventPartException(f"{arg} is not a number, the expected argument is meant to be a number")
+
 def addCharShortToValids(name: str, valids: Valids):
     addToValids(name, valids.addCharShort)
 def addItemShortToValids(name: str, valids: Valids):

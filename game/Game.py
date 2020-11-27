@@ -1,5 +1,6 @@
 
 from random import randint
+from typing import Optional
 
 from game.Character import Character
 from game.Event import Event
@@ -56,7 +57,7 @@ class Game:
     
     def trigger(self, char: Character, event: Event) -> list[tuple[str, list[tuple[Character, str]]]]:
         state, subEvents = event.trigger()
-        textResults: list[tuple[str, list[tuple[Character, str]]]] = [(state.addReplacedText(event.text), state.getResTexts())]
+        textResults: list[tuple[str, list[tuple[Character, str]]]] = [(state.getReplacedText(event.text), state.getResultStrs())]
         #print(textResults)
         if subEvents:
             sub = self.chooseFromEvents(char, subEvents, state)
@@ -69,13 +70,22 @@ class Game:
         
         possibleEvents: list[Event] = []
         totalChance = 0
+        defaultEvent: Optional[Event] = None
         
         for event in events:
             if event.prepare(char, self.tributes, state):
-                possibleEvents.append(event)
+                if event.getChance() == 0:
+                    defaultEvent = event
+                    continue
                 totalChance += event.getChance()
+                possibleEvents.append(event)
         
-        if not possibleEvents: raise Exception("No events matched when choosing from events")
+        if not possibleEvents:
+            if defaultEvent:
+                return defaultEvent
+            else:
+                raise Exception("No events matched when choosing from events")
+                
         choice = randint(0, totalChance - 1)
         
         count = 0
