@@ -182,3 +182,14 @@ class HGCog(commands.Cog):
         for zone in self.game.map.zones:
             embed.add_field(name=zone.name, value=zone.getConnxStr(), inline=False)
         await ctx.send(embed=embed)
+    
+    @commands.command()
+    async def listchars(self, ctx: Context):
+        """ Lists all Characters loaded in the game. """
+        embed = Embed(
+            title = "Characters:",
+            color = MISCORANGE
+        )
+        for character in self.game.tributes:
+            embed.add_field(name=character.string(), value=character.getLocationStr())
+        await ctx.send(embed=embed)

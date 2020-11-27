@@ -15,9 +15,6 @@ class Game:
         self.events = events
         self.map = map
         
-        self.acting = [] # populated on round start
-        self.acted = [] # populated as events are done with tributes
-        
         self.start()
     
     def start(self):
