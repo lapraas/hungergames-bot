@@ -23,7 +23,7 @@ class Character:
         self.imgSrc = imgSrc if _match_url(imgSrc) else None
         if not self.imgSrc:
             print(f"got bad image url for character {self.string()}")
-        self.subj, self.obj, self.plur1, self.plur2, self.flex, self.treatNeutral = pronouns
+        self.subj, self.obj, self.plur1, self.plur2, self.flex, self.plural = pronouns
         
         self.items: list[Item] = []
         self.tags: list[str] = []
@@ -58,12 +58,12 @@ class Character:
                 toRet = self.flex
             elif lcTag == "they're":
                 toRet = self.subj + "'re"
-                if not self.treatNeutral:
+                if not self.plural:
                     toRet = self.subj + "'s"
             elif tag:
                 # the tag is a verb to conjugate
                 toRet = tag
-                if not self.treatNeutral:
+                if not self.plural:
                     toRet = p.plural(tag)
             if tag == None or tag[0].isupper():
                 return toRet.capitalize()
@@ -131,6 +131,22 @@ class Character:
         
     def isAllyOf(self, other: Character):
         return other in self.alliance
+    
+    def getLocationStr(self):
+        if not self.location: return "No location"
+        return self.location.name
+    
+    def getItemsStr(self):
+        if not self.items: return "No items"
+        return ", ".join([item.string() for item in self.items]).capitalize()
+    
+    def getTagsStr(self):
+        if not self.tags: return "No tags"
+        return ", ".join(self.tags).capitalize()
+    
+    def getAllianceStr(self):
+        if not self.alliance: return "No alliance"
+        return ", ".join([ally.string() for ally in self.alliance])
 
 def buildCharactersFromYaml(yaml: dict[str, tuple[str, str]], *_):
     chars = []
@@ -151,12 +167,3 @@ def buildCharactersFromYaml(yaml: dict[str, tuple[str, str]], *_):
         imgSrc = data[1]
         chars.append(Character(name, imgSrc, pronouns))
     return chars
-
-def yamlCharacter(name: str, gender: str, url: str):
-    pronouns = gender.split(" ")
-    if len(pronouns) > 1:
-        if len(pronouns) not in [5, 6]:
-            gender = "nonbinary"
-        else:
-            gender = " ".join(pronouns)
-    return name, [gender, url]

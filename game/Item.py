@@ -36,6 +36,10 @@ class Item:
     
     def copy(self) -> Item:
         return Item(self.name, self.tags)
+    
+    def getTagsStr(self):
+        if not self.tags: return "No tags"
+        return ", ".join(self.tags)
 
 def buildItemsFromYaml(yaml: dict[str, str], *_):
     items = []
@@ -44,6 +48,3 @@ def buildItemsFromYaml(yaml: dict[str, str], *_):
         tags = data.split(" ")
         items.append(Item(name, tags))
     return items
-
-def yamlItem(name: str, tags: list[str]):
-    return name, tags

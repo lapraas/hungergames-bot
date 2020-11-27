@@ -32,18 +32,15 @@ def load(path: str, buildFun: Callable, args: list=None):
         if not yamlObj: return None
         return buildFun(yamlObj, *args)
 
-def add(path: str, buildFun: Callable, args: list=None):
-    if not args:
-        args = []
+def add(path: str, name, obj = dict):
     f = open(path, "r")
     allYaml = yaml.load(f)
     f.close()
     
     if not allYaml:
         allYaml = {}
-        
-    newName, newObj = buildFun(*args)
-    allYaml[newName] = newObj
+    
+    allYaml[name] = obj
     
     with open(path, "w") as f:
         yaml.dump(allYaml, f)
