@@ -41,13 +41,18 @@ class Event:
         return self.name
     
     def getChance(self):
-        return self.chance
+        return RARITIES[self.chance]
     
     def prepare(self, mainChar: Character, otherChars: list[Character], state: State=None):
         self.state = State()
         if state:
             self.state = state
         
+        if not self.req:
+            if not state.hasMainCharacter():
+                raise Exception("There were no requirements for this non-sub-event")
+            else:
+                return True
         mainReq = self.req[0]
         if not mainReq.check(mainChar, self.state):
             return False
@@ -78,7 +83,7 @@ class EventLoadException(Exception):
     def __init__(self, eventName, message):
         super().__init__(f"in event \"{eventName}\", {message}")
 
-def _loadEvent(name: str, data: dict[str, Union[int, str, dict[str, str]]], allItems: list[Item], map: Map):
+def _loadEvent(name: str, data: dict[str, Union[int, str, dict[str, str]]], valids: Valids):
     chance = data.get("chance")
     if not chance:
         raise EventLoadException(name, "chance parameter not found")
@@ -94,7 +99,6 @@ def _loadEvent(name: str, data: dict[str, Union[int, str, dict[str, str]]], allI
     req = data.get("req")
     if not req: req = []
     reqSuites: list[Suite] = []
-    valids = Valids(allItems, map)
     
     for charShort in req:
         allRequirementsStr = req.get(charShort)
@@ -133,7 +137,7 @@ def _loadEvent(name: str, data: dict[str, Union[int, str, dict[str, str]]], allI
     if allSubEvents:
         for subName in allSubEvents:
             subData = allSubEvents[subName]
-            sub.append(_loadEvent(subName, subData))
+            sub.append(_loadEvent(subName, subData, valids))
             
     return Event(name, chance, text, reqSuites, resSuites, sub)
 
@@ -141,5 +145,6 @@ def buildEventsFromYaml(yaml: dict[str, dict[str, dict[str, str]]], allItems: li
     events: list[Event] = []
     for name in yaml:
         data = yaml[name]
-        events.append(_loadEvent(name, data, allItems, map))
+        valids = Valids(allItems, map)
+        events.append(_loadEvent(name, data, valids))
     return events

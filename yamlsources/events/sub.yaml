@@ -1,0 +1,17 @@
+
+hello world sub:
+  chance: common
+  req:
+    main:
+  text: |
+    @main spots two cameras hidden in trees nearby - one to the left, one to the right.
+  
+  sub:
+    left:
+      chance: mythic
+      text: |
+        They@main decide@main to say "Hello, world!" to the one on the left. Thanks for the help, @main!
+    right:
+      chance: common
+      text: |
+        They@main decide@main to say "Hello, world!" to the one on the right. Thanks for the help, @main!

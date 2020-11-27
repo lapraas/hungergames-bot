@@ -53,3 +53,6 @@ class State:
             offset += letterDiff
         
         return text
+    
+    def hasMainCharacter(self):
+        return bool(self.charsPool)

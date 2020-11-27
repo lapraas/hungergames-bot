@@ -71,7 +71,7 @@ class Game:
         totalChance = 0
         
         for event in events:
-            if event.prepare(char, self.tributes, self.items, state):
+            if event.prepare(char, self.tributes, state):
                 possibleEvents.append(event)
                 totalChance += event.getChance()
         
@@ -80,8 +80,7 @@ class Game:
         
         count = 0
         for event in possibleEvents:
-            if choice >= count and choice < (count + event.chance):
+            if choice >= count and choice < (count + event.getChance()):
                 return event
-            count = count + event.chance
+            count = count + event.getChance()
         raise Exception(f"Invalid choice when choosing from events ({choice} out of {totalChance})")
-

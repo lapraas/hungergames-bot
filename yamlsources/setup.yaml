@@ -2,5 +2,5 @@
 map: simple.yaml
 
 characters: ALL
-items: test.yaml
-events: new.yaml
+items: ALL
+events: ALL
