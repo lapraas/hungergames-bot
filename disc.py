@@ -2,7 +2,6 @@
 import os
 
 from cogs.HGCog import HGCog
-from discord.embeds import Embed
 from discord.ext import commands
 client = commands.Bot(command_prefix=".")
     
