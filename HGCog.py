@@ -60,6 +60,35 @@ class HGCog(commands.Cog):
         await ctx.send("Pong!")
     
     @commands.command()
+    async def addchar(self, ctx: Context, *args: str):
+        """ Adds a Character to the game. Takes a name, a gender or space-separated list of pronouns, and a portrait URL. """
+        args = await HGCog.getArgs(ctx, args, ["name", "gender/pronouns", "portrait URL"])
+        if not args: return
+        charName, charGender, charURL = args
+        
+        pronouns = charGender.split(" ")
+        if len(pronouns) > 1:
+            if len(pronouns) not in [5, 6]:
+                charGender = "nonbinary"
+            else:
+                charGender = " ".join(pronouns)
+        add("./yamlsources/characters/adds.yaml", charName, [charGender, charURL])
+        embed = Embed(
+            title="Add Character",
+            description=f"Added character {charName} with gender {charGender} and image URL {charURL}"
+        )
+        await ctx.send(embed=embed)
+    
+    @commands.command()
+    async def additem(self, ctx: Context, *args: str):
+        """ Adds an Item to the game. Takes a name and a space-separated list of tags."""
+        args = await HGCog.getArgs(ctx, args, ["name", "tags"])
+        if not args: return
+        itemName, itemTags = args
+        add("./yamlsources/items/adds.yaml", itemName, itemTags)
+        await ctx.send(f"Added item {itemName} with tags {itemTags}")
+    
+    @commands.command()
     async def reload(self, ctx: Context):
         """ Reloads the game, including all added game elements. """
         self.game = defaultLoad()
@@ -111,35 +140,6 @@ class HGCog(commands.Cog):
         await ctx.send(embed=embed)
     
     @commands.command()
-    async def addchar(self, ctx: Context, *args: str):
-        """ Adds a Character to the game. Takes a name, a gender or space-separated list of pronouns, and a portrait URL. """
-        args = await HGCog.getArgs(ctx, args, ["name", "gender/pronouns", "portrait URL"])
-        if not args: return
-        charName, charGender, charURL = args
-        
-        pronouns = charGender.split(" ")
-        if len(pronouns) > 1:
-            if len(pronouns) not in [5, 6]:
-                charGender = "nonbinary"
-            else:
-                charGender = " ".join(pronouns)
-        add("./yamlsources/characters/adds.yaml", charName, [charGender, charURL])
-        embed = Embed(
-            title="Add Character",
-            description=f"Added character {charName} with gender {charGender} and image URL {charURL}"
-        )
-        await ctx.send(embed=embed)
-    
-    @commands.command()
-    async def additem(self, ctx: Context, *args: str):
-        """ Adds an Item to the game. Takes a name and a space-separated list of tags."""
-        args = await HGCog.getArgs(ctx, args, ["name", "tags"])
-        if not args: return
-        itemName, itemTags = args
-        add("./yamlsources/items/adds.yaml", itemName, itemTags)
-        await ctx.send(f"Added item {itemName} with tags {itemTags}")
-    
-    @commands.command()
     async def listevents(self, ctx: Context):
         """ Lists all Events currently loaded in the game. """
         embed = Embed(
@@ -170,4 +170,15 @@ class HGCog(commands.Cog):
         )
         for command in ctx.bot.commands:
             embed.add_field(name=command.name, value=command.help, inline=False)
+        await ctx.send(embed=embed)
+    
+    @commands.command()
+    async def listzones(self, ctx: Context):
+        """ Lists all Zones loaded in the game. """
+        embed = Embed(
+            title = "Map:",
+            color = MISCORANGE
+        )
+        for zone in self.game.map.zones:
+            embed.add_field(name=zone.name, value=zone.getConnxStr(), inline=False)
         await ctx.send(embed=embed)

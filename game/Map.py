@@ -13,6 +13,10 @@ class Zone:
     
     def getRandomConnx(self):
         return choice(self.connx)
+    
+    def getConnxStr(self):
+        if not self.connx: return "No connections"
+        return "Connects to " + ", ".join([con.name for con in self.connx])
 
 class Map:
     def __init__(self):
