@@ -1,6 +1,6 @@
 
 from game.State import Result
-from typing import Optional
+from typing import Callable, Optional
 from discord.embeds import Embed
 from discord.ext import commands
 from discord.ext.commands.context import Context
@@ -73,17 +73,21 @@ class HGCog(commands.Cog):
     @commands.command()
     async def addchar(self, ctx: Context, *args: str):
         """ Adds a Character to the game. Takes a name, a gender or space-separated list of pronouns, and a portrait URL. """
+        
         args = await HGCog.getArgs(ctx, args, ["name", "gender/pronouns", "portrait URL"])
         if not args: return
         charName, charGender, charURL = args
         
-        pronouns = charGender.split(" ")
-        if len(pronouns) > 1:
-            if len(pronouns) not in [5, 6]:
-                charGender = "nonbinary"
-            else:
-                charGender = " ".join(pronouns)
-        add("./yamlsources/characters/adds.yaml", charName, [charGender, charURL])
+        res = ALL.addCharacter(charName, [charGender, charURL])
+        if res:
+            embed = Embed(
+                title="Add Character",
+                description="Encountered error:\n\n" + res,
+                color=ERRORRED
+            )
+            await ctx.send(embed=embed)
+            return
+        
         embed = Embed(
             title="Add Character",
             description=f"Added character {charName} with gender {charGender} and image URL {charURL}",
@@ -94,10 +98,21 @@ class HGCog(commands.Cog):
     @commands.command()
     async def additem(self, ctx: Context, *args: str):
         """ Adds an Item to the game. Takes a name and a space-separated list of tags."""
+        
         args = await HGCog.getArgs(ctx, args, ["name", "tags"])
         if not args: return
-        itemName, itemTags = args
-        add("./yamlsources/items/adds.yaml", itemName, itemTags)
+        itemName, itemTags = args[:2]
+        
+        res = ALL.addItem(itemName, itemTags)
+        if res:
+            embed = Embed(
+                title="Add Item",
+                description="Encountered error:\n\n" + res,
+                color=ERRORRED
+            )
+            await ctx.send(embed=embed)
+            return
+        
         embed = Embed(
             title="Add Item",
             description=f"Added item {itemName} with tags {itemTags}",
@@ -108,12 +123,14 @@ class HGCog(commands.Cog):
     @commands.command()
     async def reload(self, ctx: Context):
         """ Reloads the game, including all added game elements. """
-        self.game = defaultLoad()
+        
+        self.game = ALL.loadGameWithSettings(["ALL"], ["ALL"], "simple", ["ALL"])
         await ctx.send("Reloaded game.")
     
     @commands.command()
     async def trigger(self, ctx: Context, *args: str):
         """ Triggers an Event. Takes the name of a loaded Character and the name of a loaded Event. """
+        
         args = await HGCog.getArgs(ctx, args, ["character name", "event name"])
         if not args: return
         charName, eventName = args
@@ -127,6 +144,7 @@ class HGCog(commands.Cog):
     @commands.command()
     async def round(self, ctx: Context):
         """ Starts a game round if one is not already happening. """
+        
         if self.resultsEmbeds:
             embed = Embed(
                 title="There's already a round happening. Use .next to progress a round.",
@@ -150,6 +168,7 @@ class HGCog(commands.Cog):
     @commands.command()
     async def next(self, ctx: Context):
         """ Progresses a round if one is happening. """
+        
         if not self.resultsEmbeds:
             embed = Embed(
                 title="Round has ended, use `.round` to start another round.",
@@ -172,6 +191,7 @@ class HGCog(commands.Cog):
     @commands.command()
     async def nextall(self, ctx: Context):
         """ Uses the `next` command until the round is over. """
+        
         res = await self.next(ctx)
         while res:
             res = await self.next(ctx)
@@ -179,6 +199,7 @@ class HGCog(commands.Cog):
     @commands.command()
     async def give(self, ctx: Context, *args: str):
         """ Adds an Item to a Character's inventory. Takes the name of a loaded Character and the name of a loaded Item. """
+        
         args = await HGCog.getArgs(ctx, args, ["character name", "item name"])
         if not args: return
         charName, itemName = args
@@ -196,6 +217,7 @@ class HGCog(commands.Cog):
     @commands.command()
     async def charinfo(self, ctx: Context, *args: str):
         """ Gets the current state of a Character. Takes the name of a loaded Character. """
+        
         char = await self.getSingleCharacter(ctx, args)
         if not char: return
         
@@ -214,6 +236,7 @@ class HGCog(commands.Cog):
     @commands.command()
     async def listevents(self, ctx: Context):
         """ Lists all Events currently loaded in the game. """
+        
         embed = Embed(
             title = "All events:",
             color = MISCORANGE
@@ -225,6 +248,7 @@ class HGCog(commands.Cog):
     @commands.command()
     async def listitems(self, ctx: Context):
         """ Lists all Items currently loaded in the game. """
+        
         embed = Embed(
             title = "All items:",
             color = MISCORANGE
@@ -236,6 +260,7 @@ class HGCog(commands.Cog):
     @commands.command()
     async def listcommands(self, ctx: Context):
         """ Lists all commands. """
+        
         embed = Embed(
             title = "All commands:",
             color = MISCORANGE
@@ -247,6 +272,7 @@ class HGCog(commands.Cog):
     @commands.command()
     async def listzones(self, ctx: Context):
         """ Lists all Zones loaded in the game. """
+        
         embed = Embed(
             title = "Map:",
             color = MISCORANGE
@@ -258,6 +284,7 @@ class HGCog(commands.Cog):
     @commands.command()
     async def listchars(self, ctx: Context):
         """ Lists all Characters loaded in the game. """
+        
         embed = Embed(
             title = "Characters:",
             color = MISCORANGE

@@ -17,11 +17,12 @@ def doCommand(op, *args):
             print("requires 2 args")
             return False
         eventName, charName = args
-        eventResTexts = GAME.triggerByName(charName, eventName)
-        for eventRes in eventResTexts:
-            print(eventRes[0])
-            print(eventRes[1])
-            print()
+        result = GAME.triggerByName(charName, eventName)
+        if type(result) == str:
+            print(result)
+            return
+        print(result.getTexts)
+        print(result.getEffects)
     
     elif op == "alliesof":
         if not len(args) == 1:
