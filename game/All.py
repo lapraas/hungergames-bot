@@ -230,34 +230,26 @@ class All:
         for subdir in subdirs:
             fullPath = os.path.join(dirName, subdir)
             self.build(buildFun, fullPath, subdir)
-    
-    def addCharacter(self, name: str, data: tuple[str, str], dotFileName="adds"):
-        if not dotFileName in self.characters: raise LoadException(f"Couldn't find a file at {dotFileName}")
-        if name in self.allCharacters: raise LoadException(f"Tried to create duplicate Character \"{name}\"")
+        
+    def create(self, name: str, data: Any, buildFun: Callable[[str, Any], Any], objsPerFile: dict[str, dict[str, Any]], allObjs: dict[str, Any], dotFileName):
+        if not dotFileName in objsPerFile: raise LoadException(f"Couldn't find a file at {dotFileName}")
+        if name in allObjs: raise LoadException(f"Tried to create duplicate \"{name}\"")
         
         targetFilePath = self.dotPathToReal(self.charsDirName, dotFileName)
         allYaml = self.getYamlFromFile(targetFilePath)
         
-        newCharacter = self.characterFromYaml(name, data)
+        new = buildFun(name, data)
         allYaml[name] = data
         self.replaceYamlInFile(targetFilePath, allYaml)
         
-        self.characters[dotFileName][name] = newCharacter
-        self.allCharacters[name] = newCharacter
+        objsPerFile[dotFileName][name] = new
+        allObjs[name] = new
+    
+    def addCharacter(self, name: str, data: tuple[str, str], dotFileName="adds"):
+        self.create(name, data, self.characterFromYaml, self.characters, self.allCharacters, dotFileName)
     
     def addItem(self, name: str, data: str, dotFileName="adds"):
-        if not dotFileName in self.items: raise LoadException(f"Couldn't find a file at {dotFileName}")
-        if name in self.allItems: raise LoadException(f"Tried to create duplicate Item {name}")
-        
-        targetFilePath = self.dotPathToReal(self.itemsDirName, dotFileName)
-        allYaml = self.getYamlFromFile(targetFilePath)
-        
-        newItem = self.itemFromYaml(name, data)
-        allYaml[name] = data
-        self.replaceYamlInFile(targetFilePath, allYaml)
-        
-        self.items[dotFileName][name] = newItem
-        self.allItems[name] = newItem
+        self.create(name, data, self.itemFromYaml, self.items, self.allItems, dotFileName)
 
 if __name__ == "__main__":
     all = All("./yamlsources")
