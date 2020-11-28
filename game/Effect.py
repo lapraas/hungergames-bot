@@ -1,49 +1,58 @@
 
 from __future__ import annotations
-
-from typing import Type
-
+from abc import abstractmethod
 from game.Item import Item
-from game.Character import Character
-from game.State import State
-from game.Valids import EventPart, Valids, validateCharShort, validateItemShort, validateTagName, validateZoneName
+from game.Map import Map
 
-class TagRes(EventPart):
+from typing import Type, Union
+
+from .Character import Character
+from .State import State
+from .Valids import EventPart, EventPartException, Suite, Valids, validateCharShort, validateItemShort, validateCharTag, validateLoadedZoneName
+
+class Effect(EventPart):
+    @abstractmethod
+    def perform(self, char: Character, state: State) -> str:
+        """ Performs the Effect on the Character.
+            Returns a flavor string about what happened to the Character. """
+        pass
+
+class TagEffect(Effect):
     args = ["type", "tag name"]
     matches = ["tag"]
         
     def __init__(self, valids: Valids, *args: str):
         _, self.tag = args
     
-    def do(self, char: Character, state: State):
+    def perform(self, char: Character, state: State):
         char.addTag(self.tag)
         return f"added tag: {self.tag}"
 
-class UntagRes(EventPart):
+class UntagEffect(Effect):
     args = ["type", "tag name"]
     matches = ["untag"]
     
     def __init__(self, valids: Valids, *args: str):
         _, self.tag = args
-        validateTagName(self.tag, valids)
+        validateCharTag(self.tag, valids)
     
-    def do(self, char: Character, state: State):
+    def perform(self, char: Character, state: State):
         char.removeTag(self.tag)
         return f"removed tag: {self.tag}"
 
-class ItemRes(EventPart):
+class ItemEffect(Effect):
     args = ["type", "item shorthand"]
     matches = ["give"]
     
     def __init__(self, valids: Valids, *args: str):
         _, self.itemShort = args
     
-    def do(self, char: Character, state: State):
+    def perform(self, char: Character, state: State):
         item = state.getItem(self.itemShort)
         char.copyAndGiveItem(item)
         return f"gave item: {item}"
 
-class AllyRes(EventPart):
+class AllyEffect(Effect):
     args = ["type", "char shorthand"]
     matches = ["ally"]
     
@@ -51,7 +60,7 @@ class AllyRes(EventPart):
         self.rType, self.charShort = args
         validateCharShort(self.charShort, valids)
     
-    def do(self, char: Character, state: State):
+    def perform(self, char: Character, state: State):
         toAlly = state.getChar(self.charShort)
         if char.isAlone() and toAlly.isAlone():
             alliance = []
@@ -69,18 +78,18 @@ class AllyRes(EventPart):
             char.joinAlliance(alliance)
             return f"allied with: {toAlly}"
 
-class LeaveRes(EventPart):
+class LeaveEffect(Effect):
     args = ["type"]
     matches = ["leave"]
     
     def __init__(self, *_):
         pass
     
-    def do(self, char: Character, state: State):
+    def perform(self, char: Character, state: State):
         char.leaveAlliance()
         return "left alliance"
 
-class ConsumeRes(EventPart):
+class ConsumeEffect(Effect):
     args = ["type", "item shorthand"]
     matches = ["consume"]
     
@@ -88,59 +97,74 @@ class ConsumeRes(EventPart):
         _, self.itemShort = args
         validateItemShort(self.itemShort, valids)
     
-    def do(self, char: Character, state: State):
+    def perform(self, char: Character, state: State):
         item = state.getItem(self.itemShort)
         char.takeItem(item)
         return f"consumed item: {item}"
 
-class MoveRes(EventPart):
+class MoveEffect(Effect):
     args = ["type", "zone name?"]
     matches = ["move"]
     
     def __init__(self, valids: Valids, *args: str):
         self.zone = None
         if len(args) >= 2:
-            zoneName = args[1]
-            validateZoneName(zoneName, valids)
-            self.zone = valids.getZoneWithName(zoneName)
+            self.zone = args[1]
+            validateLoadedZoneName(self.zone, valids)
+            self.zone = valids.getLoadedZoneWithName(self.zone)
     
-    def do(self, char: Character, state: State):
+    def perform(self, char: Character, state: State):
         if self.zone:
             char.move(self.zone)
         else:
             char.moveRandom()
         return f"moved to zone: {char.getLocation().name}"
 
-class KillRes(EventPart):
+class KillEffect(Effect):
     args = ["type"]
     matches = ["kill"]
     
     def __init__(self, valids: Valids, *args: str):
         pass
     
-    def do(self, char: Character, state: State):
+    def perform(self, char: Character, state: State):
         char.kill()
         return f"killed: {char.string()}"
 
-class ReviveRes(EventPart):
+class ReviveEffect(Effect):
     args = ["type"]
     matches = ["revive"]
     
     def __init__(self, valids: Valids, *args: str):
         pass
     
-    def do(self, char: Character, state: State):
+    def perform(self, char: Character, state: State):
         char.revive()
         return f"revived: {char.string()}"
 
-ALLRESCLASSES: list[Type[EventPart]] = [
-    TagRes,
-    UntagRes,
-    ItemRes,
-    AllyRes,
-    LeaveRes,
-    ConsumeRes,
-    MoveRes,
-    KillRes,
-    ReviveRes
+ALLEFFECTCLASSES: list[Type[EventPart]] = [
+    TagEffect,
+    UntagEffect,
+    ItemEffect,
+    AllyEffect,
+    LeaveEffect,
+    ConsumeEffect,
+    MoveEffect,
+    KillEffect,
+    ReviveEffect
 ]
+
+class EffectSuite(Suite):
+    def __init__(self, charShort: str, argsLists: list[list[str]]):
+        super().__init__(charShort, argsLists)
+        self.effects: list[Effect] = []
+    
+    def load(self, valids: Valids):
+        super().load(valids, ALLEFFECTCLASSES, self.effects)
+    
+    def performAll(self, char: Character, state: State):
+        allEffectTexts: list[str] = []
+        for ep in self.effects:
+            res = ep.perform(char, state)
+            allEffectTexts.append(res)
+        return allEffectTexts

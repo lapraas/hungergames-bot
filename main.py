@@ -1,9 +1,11 @@
 
 # id 768553973627224097
 
-from game.loads import defaultLoad
+from game.All import All
 
-GAME = defaultLoad()
+ALL = All("./yamlsources")
+
+GAME = ALL.loadGameWithSettings(["ALL"], ["ALL"], "simple", ["ALL"])
 
 tributes = []
 

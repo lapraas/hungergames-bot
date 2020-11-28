@@ -5,8 +5,8 @@ p = inflect.engine()
 import re
 
 from typing import Optional
-from game.Item import Item
-from game.Map import Zone
+from .Item import Item
+from .Map import Zone
 
 def _match_url(url):
     regex = re.compile(
@@ -46,7 +46,7 @@ class Character:
     
     def __eq__(self, o: object) -> bool:
         if not type(o) == Character: return False
-        return all(
+        return all([
             self.name == o.name,
             self.imgSrc == o.imgSrc,
             self.subj == o.subj, self.obj == o.obj, self.plur1 == o.plur1, self.plur2 == o.plur2, self.flex == o.flex, self.plural == o.plural,
@@ -55,7 +55,7 @@ class Character:
             self.location == o.location,
             # again including alliance would create an infinite recursion
             self.alive == o.alive
-        )
+        ])
     
     def reset(self):
         self.items = []
@@ -185,23 +185,3 @@ class Character:
     
     def getAliveStr(self):
         return "Alive" if self.alive else "Dead"
-
-def buildCharactersFromYaml(yaml: dict[str, tuple[str, str]], *_):
-    chars = []
-    for name in yaml:
-        data = yaml[name]
-        if not len(data) >= 2:
-            raise Exception(f"Couldn't load character {name}, too few elements in list ({data})")
-        gender = data[0]
-        if gender == "male":
-            pronouns = ["he", "him", "his", "his", "himself", False]
-        elif gender == "female":
-            pronouns = ["she", "her", "her", "hers", "herself", False]
-        elif gender == "nonbinary":
-            pronouns = ["they", "them", "their", "theirs", "themself", True]
-        else:
-            pronouns = data[0].split(" ")
-            pronouns[5] = True if not pronouns[5] in ["False", "0"] else False
-        imgSrc = data[1]
-        chars.append(Character(name, imgSrc, pronouns))
-    return chars

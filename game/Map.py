@@ -40,22 +40,3 @@ class Map:
     
     def getStartingZone(self):
         return self.zones[0]
-
-def buildZoneEventPaths(yaml: dict[str, list[dict[str, str]]]):
-    events: list[str] = []
-    for loc in yaml["locations"]:
-        new = loc["events"]
-        if not new: continue
-        events.append(new.split(" "))
-    return events
-
-def buildMapFromYaml(yaml: dict[str, list[dict[str, str]]]):
-    map = Map()
-    for loc in yaml["locations"]:
-        name = loc["name"]
-        map.addZone(name)
-    for loc in yaml["locations"]:
-        name = loc["name"]
-        connx = loc["connx"].split(" ")
-        map.connectZone(name, connx)
-    return map

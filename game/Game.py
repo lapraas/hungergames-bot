@@ -1,12 +1,12 @@
 
 from random import randint
-from typing import Optional
+from typing import Optional, Union
 
-from game.Character import Character
-from game.Event import Event
-from game.Item import Item, Item
-from game.Map import Map
-from game.State import State
+from .Character import Character
+from .Event import Event
+from .Item import Item, Item
+from .Map import Map
+from .State import Result, State
 
 
 class Game:
@@ -20,6 +20,7 @@ class Game:
     
     def start(self):
         for tribute in self.tributes:
+            tribute.reset()
             tribute.move(self.map.getStartingZone())
             tribute.addTag("running")
     
@@ -35,34 +36,34 @@ class Game:
                 return item
         return None
     
-    def triggerByName(self, charName, eventName) -> list[tuple[str, list[tuple[Character, str]]]]:
+    def triggerByName(self, charName, eventName) -> Union[str, Result]:
         char = None
         for tribute in self.tributes:
             if tribute.string() == charName:
                 char = tribute
                 break
         if not char:
-            return [(f"unable to find character named {charName}", [])]
+            return f"unable to find character named {charName}"
         event = None
         for e in self.events:
             if e.getName() == eventName:
                 event = e
                 break
         if not event:
-            return [(f"unable to find event named {eventName}", [])]
+            return f"unable to find event named {eventName}"
         if event.prepare(char, self.tributes):
             return self.trigger(char, event)
         
-        return [("Trigger failed", [])]
+        return "Trigger failed"
     
-    def trigger(self, char: Character, event: Event) -> list[tuple[str, list[tuple[Character, str]]]]:
-        state, subEvents = event.trigger()
-        textResults: list[tuple[str, list[tuple[Character, str]]]] = [(state.getReplacedText(event.text), state.getResultStrs())]
-        #print(textResults)
+    def trigger(self, char: Character, event: Event, results: Optional[Result]=None) -> Result:
+        if not results:
+            results = Result(char)
+        state, subEvents = event.trigger(results)
         if subEvents:
             sub = self.chooseFromEvents(char, subEvents, state)
-            textResults += self.trigger(char, sub)
-        return textResults
+            self.trigger(char, sub, results)
+        return results
         
     def chooseFromEvents(self, char: Character, events: list[Event]=None, state: State=None):
         if not events:
@@ -95,13 +96,13 @@ class Game:
             count = count + event.getChance()
         raise Exception(f"Invalid choice when choosing from events ({choice} out of {totalChance})")
     
-    def round(self) -> list[tuple[Character, list[tuple[str, list[tuple[Character, str]]]]]]:
-        allresults = []
+    def round(self) -> dict[Character, Result]:
+        allresults = {}
         for tribute in self.tributes:
             if not tribute.isAlive():
                 continue
             event = self.chooseFromEvents(tribute)
-            allresults.append((tribute, self.trigger(tribute, event)))
+            allresults[tribute] = self.trigger(tribute, event)
         return allresults
             
         

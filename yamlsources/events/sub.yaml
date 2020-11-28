@@ -1,7 +1,7 @@
 
 hello world sub:
   chance: common
-  req:
+  checks:
     main:
   text: |
     @main spots two cameras hidden in trees nearby - one to the left, one to the right.
@@ -18,7 +18,7 @@ hello world sub:
 
 oneoff sub:
   chance: common
-  req:
+  checks:
     main:
   text: |
     @main spots a camera hidden in the trunk of a nearby tree.
@@ -26,7 +26,7 @@ oneoff sub:
   sub:
     smash:
       chance: common
-      req:
+      checks:
         main: limit total 1
       text: |
         They@main smash@main it, rendering it useless.
@@ -34,3 +34,29 @@ oneoff sub:
       chance: DEFAULT
       text: |
         The camera has already been destroyed; they@main don't need to do anything to it.
+
+commune with spirits:
+  chance: common
+  checks:
+    main:
+    other: dead
+  text: |
+    @main prepares a pentagram and tries to summon @other. They@other appear@other as a ghost before them@main.
+    
+  sub:
+    warm revive:
+      chance: mythic
+      text: |
+        The two have a heartwarming conversation. After a while, @other miraculously fades back into existence, revived by the newfound companionship.
+      effects:
+        other: revive, ally main
+    revive:
+      chance: shiny
+      text: |
+        @other slowly begins to fade back into existence. They@other thank@other @main and the two part ways.
+      effects:
+        other: revive
+    unsuccessful:
+      chance: uncommon
+      text: |
+        The two start to talk, but all of a sudden, @other disappears. Disheartened, @main leaves the scene.

@@ -1,28 +1,29 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 import re
 from typing import Callable, Type, Union
 
-from game.Character import Character
-from game.Item import Item, Item
-from game.Map import Map
-from game.State import State
+from .Item import Item, Item
+from .Map import Map
     
 class Valids:
-    def __init__(self, allItems: list[Item], map: Map):
+    """ Created per-Event to check to see if the Event will run in the Game. """
+    
+    def __init__(self, loadedMap: Map, loadedItems: list[Item]):
         self.charShorts: list[str] = []
         self.itemShorts: list[str] = []
-        self.tagNames: list[str] = []
-        self.items = allItems
-        self.map = map
-        self.allZoneNames = [zone.name for zone in map.zones]
-        self.allItemNames = [i.string() for i in self.items]
-        self.allItemTags: set[str] = set()
-        for item in self.items:
+        self.charTags: list[str] = []
+        
+        self.map = loadedMap
+        self.loadedZoneNames = [zone.name for zone in loadedMap.zones]
+        
+        self.loadedItems = loadedItems
+        self.loadedItemNames = [i.string() for i in self.loadedItems]
+        self.loadedItemTags: set[str] = set()
+        for item in self.loadedItems:
             for tag in item.tags:
-                self.allItemTags.add(tag)
+                self.loadedItemTags.add(tag)
     
     def addCharShort(self, short: str):
         if self.isValidCharShort(short): return False
@@ -34,9 +35,9 @@ class Valids:
         self.itemShorts.append(short)
         return True
     
-    def addTagName(self, name: str):
-        if self.isValidTagName(name): return False
-        self.tagNames.append(name)
+    def addCharTag(self, name: str):
+        if self.isValidCharTag(name): return False
+        self.charTags.append(name)
         return True
 
     def isValidCharShort(self, short: str):
@@ -45,57 +46,57 @@ class Valids:
     def isValidItemShort(self, short: str):
         return short in self.itemShorts
     
-    def isValidTagName(self, name: str):
-        return name in self.tagNames
+    def isValidCharTag(self, name: str):
+        return name in self.charTags
     
-    def isValidItem(self, name: str):
-        return name in self.allItemNames
+    def isLoadedItem(self, name: str):
+        return name in self.loadedItemNames
     
-    def isValidTag(self, name: str):
+    def isLoadedItemTag(self, name: str):
         if name == "ANY":
             return True
-        return name in self.allItemTags
+        return name in self.loadedItemTags
     
-    def isValidZone(self, name: str):
-        return name in self.allZoneNames
+    def isLoadedZone(self, name: str):
+        return name in self.loadedZoneNames
 
-    def getAllItemsWithTags(self, tags: list[str]):
+    def getLoadedItemsWithTags(self, tags: list[str]):
         possItems = []
-        for item in self.items:
+        for item in self.loadedItems:
             if item.hasAllTags(tags):
                 possItems.append(item)
         return possItems
     
-    def getItemWithName(self, name: str):
+    def getLoadedItemWithName(self, name: str):
         # we've guaranteed the item name is valid when this is called
-        for item in self.items:
+        for item in self.loadedItems:
             if item.string() == name:
                 return [item]
     
-    def getZoneWithName(self, name: str):
+    def getLoadedZoneWithName(self, name: str):
         for zone in self.map.zones:
             if zone.name == name:
                 return zone
 
 class EventPartException(Exception):
+    """ Simple Exception for differentiating an Event's validation errors. """
     pass
 
-class EventPart(ABC):
+class EventPart:
     args: list[str]
     matches: list[str]
     
     @classmethod
     def match(cls, args: list[str]) -> bool:
+        """ Initially matches a list of args to this EventPart.
+            Returns True if matched and False otherwise. """
         return any(args[0] == name for name in cls.matches)
     
     @classmethod
     def build(cls, args: list[str], valids: Valids):
+        """ Gets an instance of thie EventPart, checking to see if the number of args match the expected number and erroring otherwise. """
         checkArgCount(args, cls.args)
         return cls(valids, *args)
-    
-    @abstractmethod
-    def do(self, char: Character, state: State) -> Union[None, bool, str]:
-        pass
 
 def checkArgCount(args: list[str], argNames: list[str]):
     ct = len(argNames)
@@ -117,14 +118,14 @@ def validateCharShort(name: str, valids: Valids):
     validate(valids.isValidCharShort, name, "character shorthand")
 def validateItemShort(name: str, valids: Valids):
     validate(valids.isValidItemShort, name, "item shorthand")
-def validateItemTag(name: str, valids: Valids):
-    validate(valids.isValidTag, name, "item tag")
-def validateItemName(name: str, valids: Valids):
-    validate(valids.isValidItem, name, "specific item name")
-def validateTagName(name: str, valids: Valids):
-    validate(valids.isValidTagName, name, "tag name")
-def validateZoneName(name: str, valids: Valids):
-    validate(valids.isValidZone, name, "zone name")
+def validateCharTag(name: str, valids: Valids):
+    validate(valids.isValidCharTag, name, "tag name")
+def validateLoadedItemTag(name: str, valids: Valids):
+    validate(valids.isLoadedItemTag, name, "item tag")
+def validateLoadedItemName(name: str, valids: Valids):
+    validate(valids.isLoadedItem, name, "specific item name")
+def validateLoadedZoneName(name: str, valids: Valids):
+    validate(valids.isLoadedZone, name, "zone name")
 
 def validate(fun: Callable, name: str, errName: str):
     if not fun(name):
@@ -140,7 +141,7 @@ def addCharShortToValids(name: str, valids: Valids):
 def addItemShortToValids(name: str, valids: Valids):
     addToValids(name, valids.addItemShort)
 def addTagNameToValids(name: str, valids: Valids):
-    addToValids(name, valids.addTagName)
+    addToValids(name, valids.addCharTag)
 
 def addToValids(name: str, addFun: Callable):
     if not addFun:
@@ -163,55 +164,34 @@ def validateText(text: str, valids: Valids):
                 raise EventPartException(f"in text:\n    \"{text}\"\n    Encountered nonexistent character {tag}@{short}")
 
 class Suite:
-    def __init__(self, charShort: str, eventPartClasses: list[Type[EventPart]], epArgLists: list[list[str]], valids: Valids):
-        self.eventPartClasses = eventPartClasses
+    def __init__(self, charShort: str, argsLists: list[list[str]]):
         self.charShort = charShort
-        self.valids = valids
-        
-        self.eventParts: list[EventPart] = []
-        
-        self.valids.addCharShort(self.charShort)
-        self.parse(epArgLists)
+        self.argsLists = argsLists
     
     def getCharShort(self):
         return self.charShort
     
-    def getValids(self):
-        return self.valids
-    
-    def exception(self, reqs: list[list[str]], args: list[str], e: Union[Exception, str]):
-        reqsStr = ""
-        for req in reqs:
-            if args == req:
-                reqsStr += f"->"
-            reqsStr += " ".join(req) + ", "
-        reqsStr = reqsStr[:-2]
-        return Exception(f"in line \"{self.charShort}: {reqsStr}\"\n    {e}")
-    
-    def parse(self, reqs: list[list[str]]):
-        for args in reqs:
+    def load(self, valids: Valids, classes: list[Type[EventPart]], partsList: list[EventPart]):
+        for args in self.argsLists:
             found = False
-            for reqClass in self.eventPartClasses:
+            for reqClass in classes:
                 if reqClass.match(args):
                     try:
-                        ep = reqClass.build(args, self.valids)
+                        part = reqClass.build(args, valids)
                     except EventPartException as e:
-                        raise self.exception(reqs, args, e)
-                    self.eventParts.append(ep)
+                        raise self.exception(args, e)
+                    partsList.append(part)
                     found = True
                     break
             if not found:
-                raise self.exception(reqs, args, "Not recognized as a valid event part")
-
-    def check(self, char: Character, state: State):
-        for ep in self.eventParts:
-            if not ep.do(char, state):
-                return False
-        return True
+                raise self.exception(args, "Not recognized as a valid Effect")
+        return valids
     
-    def perform(self, char: Character, state: State):
-        allRes: list[str] = []
-        for ep in self.eventParts:
-            res = ep.do(char, state)
-            allRes.append(res)
-        return allRes
+    def exception(self, args: list[str], e: Union[Exception, str]):
+        argsStr = ""
+        for arg in self.argsLists:
+            if args == arg:
+                argsStr += f"->"
+            argsStr += " ".join(arg) + ", "
+        argsStr = argsStr[:-2]
+        return Exception(f"in line \"{self.charShort}: {argsStr}\"\n    {e}")

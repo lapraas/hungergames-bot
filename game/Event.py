@@ -7,13 +7,13 @@ from typing import Union
 
 from discord.ext.commands.core import check
 
-from game.Character import Character
-from game.Item import Item, Item
-from game.Map import Map
-from game.Requirement import ALLREQCLASSES, AliveReq, NearbyReq
-from game.Result import ALLRESCLASSES
-from game.State import State
-from game.Valids import Suite, Valids, validateText
+from .Character import Character
+from .Item import Item, Item
+from .Map import Map
+from .Check import CheckSuite, AliveCheck, NearbyCheck
+from .Effect import EffectSuite
+from .State import Result, State
+from .Valids import Suite, Valids, validateText
 
 RARITIES = {
     "common": 30,
@@ -26,16 +26,13 @@ RARITIES = {
     "DEFAULT": 0
 }
 
-defaultAlive = AliveReq(None, "alive")
-defualtNearby = NearbyReq(None, "nearby")
-
 class Event:
-    def __init__(self, name: str, chance: int, text: str, req: list[Suite], res: list[Suite], sub: list[Event]):
+    def __init__(self, name: str, chance: int, text: str, checkNamesToArgLists: dict[str, list[list[str]]], effectNamesToArgLists: dict[str, list[list[str]]], sub: list[Event]):
         self.name = name
         self.chance = chance
         self.text = text
-        self.reqSuites = req
-        self.resSuites = res
+        self.checkSuites = [CheckSuite(checkName, checkNamesToArgLists[checkName]) for checkName in checkNamesToArgLists]
+        self.effectSuites = [EffectSuite(effectName, effectNamesToArgLists[effectName]) for effectName in effectNamesToArgLists]
         self.sub = sub
         self.triggerCts: dict[Character, int] = {}
     
@@ -50,6 +47,19 @@ class Event:
     
     def getChance(self):
         return RARITIES[self.chance]
+        
+    def load(self, valids: Valids):
+        try:
+            for i, checkSuite in enumerate(self.checkSuites):
+                checkSuite.load(valids)
+                if i > 1:
+                    checkSuite.addNearbyCheckIfNeeded(valids)
+            for effectSuite in self.effectSuites:
+                effectSuite.load(valids)
+            for subEvent in self.sub:
+                subEvent.load(valids)
+        except Exception as e:
+            raise Exception(f"Encountered an exception when loading Event \"{self.name}\": {e}")
     
     def prepare(self, mainChar: Character, otherChars: list[Character], state: State=None) -> bool:
         """
@@ -63,65 +73,55 @@ class Event:
         else:
             return self.prepareSub(otherChars)
     
-    def prepareSub(self, otherChars: list[Character]):
-        """ Prepares a sub-event. """
-        # Sub-events can have empty requirements
-        if not self.reqSuites: return True
-        
-        for reqSuite in self.reqSuites:
-            # There might already be a character in the Event State
-            short = reqSuite.getCharShort()
-            matchedChar = self.state.getChar(short)
-            
-            # If that's not the case, we want to match a new Character like normal
-            if not matchedChar:
-                matchedChar = self.matchCharacter(reqSuite, otherChars)
-                if not matchedChar: return False
-                self.state.setChar(reqSuite.getCharShort(), matchedChar)
-                continue
-            # If that is the case, we want to check the preexisting Character against the new requirements
-            if not reqSuite.check(matchedChar, self.state):
-                return False
-        
-        return True
-    
     def prepareBase(self, mainChar: Character, otherChars: list[Character]):
         """ Prepares a base-level event. """
         # Main Character's requirements are always the first in the list of Suites
-        mainReqSuite = self.reqSuites[0]
-        # Check to see if the mainChar is alive, but only if there are no AliveReqs in the Suite
-        if (not any([type(req) == AliveReq for req in mainReqSuite.eventParts])):
-            if not defaultAlive.do(mainChar, self.state): return False
+        mainCheckSuite = self.checkSuites[0]
         
         # Check the rest of the main's requirements
-        if not mainReqSuite.check(mainChar, self.state): return False
+        if not mainCheckSuite.checkAll(mainChar, self.state): return False
         
         # If the main character matches, we put them into the State
-        self.state.setChar(mainReqSuite.getCharShort(), mainChar)
+        self.state.setChar(mainCheckSuite.getCharShort(), mainChar)
         
         # All other requirement suites match other characters from the given list of all other Characters
-        for reqSuite in self.reqSuites[1:]:
+        for reqSuite in self.checkSuites[1:]:
             matchedChar = self.matchCharacter(reqSuite, otherChars)
             if not matchedChar: return False
             self.state.setChar(reqSuite.getCharShort(), matchedChar)
         return True
     
-    def matchCharacter(self, reqSuite: Suite, otherChars: list[Character]):
+    def prepareSub(self, otherChars: list[Character]):
+        """ Prepares a sub-event. """
+        # Sub-events can have empty requirements
+        if not self.checkSuites: return True
+        
+        for checkSuite in self.checkSuites:
+            # There might already be a character in the Event State
+            short = checkSuite.getCharShort()
+            matchedChar = self.state.getChar(short)
+            
+            # If that's not the case, we want to match a new Character like normal
+            if not matchedChar:
+                matchedChar = self.matchCharacter(checkSuite, otherChars)
+                if not matchedChar: return False
+                self.state.setChar(checkSuite.getCharShort(), matchedChar)
+                continue
+            # If that is the case, we want to check the preexisting Character against the new requirements
+            if not checkSuite.checkAll(matchedChar, self.state):
+                return False
+        
+        return True
+    
+    def matchCharacter(self, checkSuite: CheckSuite, otherChars: list[Character]):
         # Collect a list of all matched Characters
         matchedChars: list[Character] = []
-        
-        # Boolean values that determine whether or not we're doing the default checks
-        checkAlive = not any([type(req) == AliveReq for req in reqSuite.eventParts])
-        checkNearby = not any([type(req) == NearbyReq for req in reqSuite.eventParts])
         
         for char in otherChars:
             # Can't match the same Character twice
             if self.state.doesCharExist(char): continue
-            # Default checks if necessary
-            if checkAlive and not defaultAlive.do(char, self.state): continue
-            if checkNearby and not defualtNearby.do(char, self.state): continue
             # Full Suite check, adding Character if it matches
-            if reqSuite.check(char, self.state):
+            if checkSuite.checkAll(char, self.state):
                 matchedChars.append(char)
         if not matchedChars:
             return False
@@ -136,90 +136,15 @@ class Event:
             self.triggerCts[char] = 0
         self.triggerCts[char] += 1
     
-    def trigger(self):
+    def trigger(self, result: Result):
         """ Performs the Event's effects on the Characters given to the State. """
         mc = self.state.getChar()
         self.incrementTriggers(mc)
         
+        result.addText(self.text, self.state)
         # Do each Suite's actions to the State's Characters
-        for resSuite in self.resSuites:
-            char = self.state.getChar(resSuite.getCharShort())
-            for resText in resSuite.perform(char, self.state):
-                self.state.addResText(char, resText)
+        for effectSuite in self.effectSuites:
+            char = self.state.getChar(effectSuite.getCharShort())
+            for effectText in effectSuite.performAll(char, self.state):
+                result.addEffect(char, effectText)
         return self.state, self.sub
-
-class EventLoadException(Exception):
-    def __init__(self, eventName, message):
-        super().__init__(f"in event \"{eventName}\", {message}")
-
-def _loadEvent(name: str, data: dict[str, Union[int, str, dict[str, str]]], valids: Valids):
-    """ Builds an Event from a YAML object, using a unique Valids object.
-        Raises any Exceptions that the Event encounters in its creation as EventLoadExceptions. """
-    chance = data.get("chance")
-    if not chance:
-        raise EventLoadException(name, "`chance` value not found")
-    
-    text = data.get("text")
-    if not text:
-        raise EventLoadException(name, "`text` value not found")
-    if text[-1] == "\n":
-        text = text[:-1]
-    
-    commaPat = re.compile(r"\s*,\s*")
-    spacePat = re.compile(r"\s+")
-    req = data.get("req")
-    if not req:
-        req = {}
-    if type(req) == str:
-        raise EventLoadException(name, f"bad value for `req` was found: \"{req}\"")
-    reqSuites: list[Suite] = []
-    
-    for charShort in req:
-        allRequirementsStr = req.get(charShort)
-        reqs: list[list[str]] = []
-        if allRequirementsStr and type(allRequirementsStr) == str:
-            reqs = commaPat.split(allRequirementsStr)
-            reqs = [spacePat.split(req) for req in reqs]
-        try:
-            reqSuite = Suite(charShort, ALLREQCLASSES, reqs, valids)
-        except Exception as e:
-            raise EventLoadException(name, str(e))
-        reqSuites.append(reqSuite)
-        
-    res = data.get("res")
-    if not res: res = []
-    resSuites: list[Suite] = []
-    for charShort in res:
-        allResultsStr = res.get(charShort)
-        ress: list[list[str]] = []
-        if allResultsStr and type(allResultsStr) == str:
-            ress = commaPat.split(allResultsStr)
-            ress = [spacePat.split(res) for res in ress]
-        try:
-            resSuite = Suite(charShort, ALLRESCLASSES, ress, valids)
-        except Exception as e:
-            raise EventLoadException(name, str(e))
-        resSuites.append(resSuite)
-    
-    try:
-        validateText(text, valids)
-    except Exception as e:
-        raise EventLoadException(name, str(e))
-    
-    sub = []
-    allSubEvents = data.get("sub")
-    if allSubEvents:
-        for subName in allSubEvents:
-            subData = allSubEvents[subName]
-            sub.append(_loadEvent(subName, subData, valids))
-            
-    return Event(name, chance, text, reqSuites, resSuites, sub)
-
-def buildEventsFromYaml(yaml: dict[str, dict[str, dict[str, str]]], allItems: list[Item], map: Map):
-    """ Builds a list of events from a YAML object. """
-    events: list[Event] = []
-    for name in yaml:
-        data = yaml[name]
-        valids = Valids(allItems, map)
-        events.append(_loadEvent(name, data, valids))
-    return events

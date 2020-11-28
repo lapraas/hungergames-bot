@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 from typing import Optional, Union
 
-from game.Character import Character
-from game.Item import Item
+from .Character import Character
+from .Item import Item
 
 class State:
     """ This is a more temporary counterpart to Valids.
@@ -58,20 +58,22 @@ class State:
     def getItem(self, itemShort: str) -> Optional[Item]:
         """ Gets an Item matched to a shorthand. """
         return self.itemsPool.get(itemShort)
+
+class Result:
+    def __init__(self, mainChar: Character):
+        self.mainChar = mainChar
+        self.effects: dict[Character, list[str]] = {}
+        self.texts: list[str] = []
     
-    def addResText(self, char: Character, resText: str):
-        """ Adds a result string to a Character's list of result strings.
-            Called by the Event with the returned text from an EventPart. """
-        if not char in self.resultStrs:
-            self.resultStrs[char] = []
-        self.resultStrs[char].append(resText)
+    def addEffect(self, affected: Character, text: str):
+        if not affected in self.effects:
+            self.effects[affected] = []
+        self.effects[affected].append(text)
     
-    def getResultStrs(self) -> dict[Character, list[str]]:
-        return self.resultStrs
-    
-    def getReplacedText(self, text) -> str:
+    def addText(self, text: str, state: State):
         """ Replaces all shorthands in an Event's text result with their respective Character or Item.
-            Also handles pronouns, articles, and verb conjugation. """
+            Also handles pronouns, articles, and verb conjugation.
+            Adds the replaced text. """
         textReplacePat = re.compile(r"([A-Za-z']*)(@|&)(\w+)")
         matches = textReplacePat.finditer(text)
         offset = 0
@@ -79,13 +81,19 @@ class State:
             toConj, objType, short = match.groups()
             replaceObj = None
             if objType == "@":
-                replaceObj = self.charsPool[short]
+                replaceObj = state.getChar(short)
             elif objType == "&":
-                replaceObj = self.itemsPool[short]
+                replaceObj = state.getItem(short)
             replaceText = replaceObj.string(toConj)
             
             text = text[:match.start() - offset] + replaceText + text[match.end() - offset:]
             letterDiff = match.end() - match.start() - len(replaceText)
             offset += letterDiff
         
-        return text
+        self.texts.append(text)
+    
+    def getEffects(self):
+        return self.effects
+    
+    def getTexts(self):
+        return self.texts

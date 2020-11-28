@@ -40,11 +40,3 @@ class Item:
     def getTagsStr(self):
         if not self.tags: return "No tags"
         return ", ".join(self.tags)
-
-def buildItemsFromYaml(yaml: dict[str, str], *_):
-    items = []
-    for name in yaml:
-        data = yaml[name]
-        tags = data.split(" ")
-        items.append(Item(name, tags))
-    return items

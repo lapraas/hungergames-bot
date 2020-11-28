@@ -2,16 +2,12 @@
 locations:
   - name: Center
     connx: Caves Jungle Tidepools
-    events:
 
   - name: Caves
     connx: Center Tidepools Jungle
-    events:
 
   - name: Jungle
     connx: Caves Center Tidepools
-    events:
 
   - name: Tidepools
     connx: Caves Center Jungle
-    events:
