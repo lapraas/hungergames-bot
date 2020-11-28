@@ -57,6 +57,9 @@ class Character:
             self.alive == o.alive
         ])
     
+    def getName(self):
+        return self.name
+    
     def reset(self):
         self.items = []
         self.tags = []
@@ -125,7 +128,7 @@ class Character:
     
     def getItemByName(self, itemName: str) -> Optional[Item]:
         for item in self.items:
-            if item.string() == itemName:
+            if item.getName() == itemName:
                 return item
         return None
     
@@ -147,7 +150,7 @@ class Character:
             self.removeTag("running")
     
     def moveRandom(self):
-        self.move(self.location.getRandomConnx())
+        self.move(self.location.getRandomConnection())
     
     def isAlone(self):
         return len(self.alliance) == 0

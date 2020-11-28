@@ -21,8 +21,9 @@ def doCommand(op, *args):
         if type(result) == str:
             print(result)
             return
-        print(result.getTexts)
-        print(result.getEffects)
+        for text in result.getTexts():
+            print(text)
+        print(result.getEffects())
     
     elif op == "alliesof":
         if not len(args) == 1:

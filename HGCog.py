@@ -278,7 +278,7 @@ class HGCog(commands.Cog):
             color = MISCORANGE
         )
         for zone in self.game.map.zones:
-            embed.add_field(name=zone.name, value=zone.getConnxStr(), inline=False)
+            embed.add_field(name=zone.name, value=zone.getConnectionStr(), inline=False)
         await ctx.send(embed=embed)
     
     @commands.command()

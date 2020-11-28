@@ -1,19 +1,12 @@
 
 from __future__ import annotations
-from collections import OrderedDict, defaultdict
 from random import choice
-import re
-from typing import Union
-
-from discord.ext.commands.core import check
 
 from .Character import Character
-from .Item import Item, Item
-from .Map import Map
-from .Check import CheckSuite, AliveCheck, NearbyCheck
+from .Check import CheckSuite
 from .Effect import EffectSuite
 from .State import Result, State
-from .Valids import Suite, Valids, validateText
+from .Valids import ValidationException, Valids
 
 RARITIES = {
     "common": 30,
@@ -50,15 +43,21 @@ class Event:
         
     def load(self, valids: Valids):
         try:
-            for i, checkSuite in enumerate(self.checkSuites):
-                checkSuite.load(valids)
-                if i > 1:
+            if self.checkSuites:
+                mainCheckSuite = self.checkSuites[0]
+                mainCheckSuite.load(valids)
+                for checkSuite in self.checkSuites[1:]:
+                    checkSuite.load(valids)
                     checkSuite.addNearbyCheckIfNeeded(valids)
+            
             for effectSuite in self.effectSuites:
                 effectSuite.load(valids)
             for subEvent in self.sub:
                 subEvent.load(valids)
-        except Exception as e:
+            
+            valids.validateText(self.text)
+            
+        except ValidationException as e:
             raise Exception(f"Encountered an exception when loading Event \"{self.name}\": {e}")
     
     def prepare(self, mainChar: Character, otherChars: list[Character], state: State=None) -> bool:

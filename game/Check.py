@@ -8,7 +8,7 @@ from typing import Type, Union
 from .Character import Character
 from .Item import Item
 from .State import State
-from .Valids import EventPart, EventPartException, Suite, Valids, addItemShortToValids, addTagNameToValids, validateCharShort, validateIsInt, validateLoadedItemTag, validateLoadedZoneName
+from .Valids import EventPart, Suite, Valids
 
 class Check(EventPart):
     @abstractmethod
@@ -27,7 +27,7 @@ class NearbyCheck(Check):
     def __init__(self, valids: Valids, *args: str):
         if len(args) == 2 and args[0] == NearbyCheck.NEARBY:
             self.state, self.targetShort = args
-            validateCharShort(self.targetShort, valids)
+            valids.validateCharShort(self.targetShort)
         else:
             self.state, = args
             self.targetShort = None
@@ -83,7 +83,7 @@ class RelationCheck(Check):
         
     def __init__(self, valids: Valids, *args: str):
         relationship, targetShort = args
-        validateCharShort(targetShort, valids)
+        valids.validateCharShort(targetShort)
         
         self.relationship = relationship
         self.targetShort = targetShort
@@ -105,7 +105,7 @@ class TagCheck(Check):
         _, tag = args
         
         self.tag = tag
-        addTagNameToValids(self.tag, valids)
+        valids.addCharTag(self.tag)
     
     def check(self, char: Character, state: State):
         return char.hasTag(self.tag)
@@ -121,11 +121,11 @@ class ItemCheck(Check):
         self.rType, self.itemShort, *itemTags = args
         self.itemTags = itemTags
         
-        addItemShortToValids(self.itemShort, valids)
+        valids.addItemShort(self.itemShort)
         
         if self.rType == ItemCheck.BY_TAGS:
             for tag in self.itemTags:
-                validateLoadedItemTag(tag, valids)
+                valids.validateLoadedItemTag(tag)
     
     def check(self, char: Character, state: State) -> bool:
         item: Item = None
@@ -149,11 +149,11 @@ class CreateCheck(Check):
         self.itemTags = itemTags
         
         self.items: list[Item] = None
-        addItemShortToValids(self.itemShort, valids)
+        valids.addItemShort(self.itemShort)
         
         if self.rType == CreateCheck.BY_TAGS:
             for tag in self.itemTags:
-                validateLoadedItemTag(tag, valids)
+                valids.validateLoadedItemTag(tag)
         
         if self.rType == CreateCheck.BY_TAGS:
             self.items = valids.getLoadedItemsWithTags(self.itemTags)
@@ -172,7 +172,7 @@ class LocationCheck(Check):
     def __init__(self, valids: Valids, *args: str):
         _, self.locName = args
         
-        validateLoadedZoneName(self.locName, valids)
+        valids.validateLoadedZoneName(self.locName)
     
     def check(self, char: Character, state: State) -> bool:
         return char.isIn(self.locName)
@@ -186,7 +186,7 @@ class LimitCheck(Check):
     
     def __init__(self, valids: Valids, *args: str):
         _, self.cType, self.count = args
-        validateIsInt(self.count)
+        valids.validateIsNumber(self.count)
         self.count = int(self.count)
     
     def check(self, char: Character, state: State) -> bool:

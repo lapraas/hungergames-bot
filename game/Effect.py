@@ -8,8 +8,7 @@ from typing import Type, Union
 
 from .Character import Character
 from .State import State
-from .Valids import EventPart, EventPartException, Suite, Valids, validateCharShort, validateItemShort, validateCharTag, validateLoadedZoneName
-
+from .Valids import EventPart, Suite, Valids
 class Effect(EventPart):
     @abstractmethod
     def perform(self, char: Character, state: State) -> str:
@@ -34,7 +33,7 @@ class UntagEffect(Effect):
     
     def __init__(self, valids: Valids, *args: str):
         _, self.tag = args
-        validateCharTag(self.tag, valids)
+        valids.validateCharTag(self.tag)
     
     def perform(self, char: Character, state: State):
         char.removeTag(self.tag)
@@ -58,7 +57,7 @@ class AllyEffect(Effect):
     
     def __init__(self, valids: Valids, *args: str):
         self.rType, self.charShort = args
-        validateCharShort(self.charShort, valids)
+        valids.validateCharShort(self.charShort)
     
     def perform(self, char: Character, state: State):
         toAlly = state.getChar(self.charShort)
@@ -95,7 +94,7 @@ class ConsumeEffect(Effect):
     
     def __init__(self, valids: Valids, *args: str):
         _, self.itemShort = args
-        validateItemShort(self.itemShort, valids)
+        valids.validateItemShort(self.itemShort)
     
     def perform(self, char: Character, state: State):
         item = state.getItem(self.itemShort)
@@ -110,7 +109,7 @@ class MoveEffect(Effect):
         self.zone = None
         if len(args) >= 2:
             self.zone = args[1]
-            validateLoadedZoneName(self.zone, valids)
+            valids.validateLoadedZoneName(self.zone)
             self.zone = valids.getLoadedZoneWithName(self.zone)
     
     def perform(self, char: Character, state: State):

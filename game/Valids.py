@@ -10,75 +10,92 @@ from .Map import Map
 class Valids:
     """ Created per-Event to check to see if the Event will run in the Game. """
     
-    def __init__(self, loadedMap: Map, loadedItems: list[Item]):
+    def __init__(self, loadedMap: Map, loadedItems: dict[str, Item]):
         self.charShorts: list[str] = []
         self.itemShorts: list[str] = []
         self.charTags: list[str] = []
         
         self.map = loadedMap
-        self.loadedZoneNames = [zone.name for zone in loadedMap.zones]
         
         self.loadedItems = loadedItems
-        self.loadedItemNames = [i.string() for i in self.loadedItems]
         self.loadedItemTags: set[str] = set()
-        for item in self.loadedItems:
+        for item in self.loadedItems.values():
             for tag in item.tags:
                 self.loadedItemTags.add(tag)
     
     def addCharShort(self, short: str):
-        if self.isValidCharShort(short): return False
         self.charShorts.append(short)
-        return True
     
     def addItemShort(self, short: str):
-        if self.isValidItemShort(short): return False
+        if short in self.itemShorts: raise ValidationException(f"Encountered a duplicate Item shorthand: \"{short}\"")
         self.itemShorts.append(short)
-        return True
     
     def addCharTag(self, name: str):
-        if self.isValidCharTag(name): return False
+        if name in self.charTags: return
         self.charTags.append(name)
-        return True
 
-    def isValidCharShort(self, short: str):
-        return short in self.charShorts
+    def validateCharShort(self, short: str):
+        if not short in self.charShorts:
+            raise ValidationException(f"Encountered an invalid Character shorthand: \"{short}\"")
     
-    def isValidItemShort(self, short: str):
-        return short in self.itemShorts
+    def validateItemShort(self, short: str):
+        if not short in self.itemShorts:
+            raise ValidationException(f"Encountered an invalid Item shorthand: \"{short}\"")
     
-    def isValidCharTag(self, name: str):
-        return name in self.charTags
+    def validateCharTag(self, name: str):
+        if not name in self.charTags:
+            raise ValidationException(f"Encountered an invalid Character tag: \"{name}\"")
     
-    def isLoadedItem(self, name: str):
-        return name in self.loadedItemNames
+    def validateLoadedItem(self, name: str):
+        if not name in self.loadedItems:
+            raise ValidationException(f"Encountered an invalid Item name (is it loaded?): \"{name}\"")
     
-    def isLoadedItemTag(self, name: str):
-        if name == "ANY":
-            return True
-        return name in self.loadedItemTags
+    def validateLoadedItemTag(self, name: str):
+        if not name in self.loadedItemTags and not name == "ANY":
+            raise ValidationException(f"Encountered an invalid Item tag: \"{name}\"")
     
-    def isLoadedZone(self, name: str):
-        return name in self.loadedZoneNames
+    def validateLoadedZoneName(self, name: str):
+        if not name in self.map.zones:
+            raise ValidationException(f"Encountered an invalid Zone name: \"{name}\"")
+    
+    def validateIsNumber(self, arg):
+        for let in arg:
+            if let not in "1234567890":
+                raise ValidationException(f"Encountered an invalid argument, expceted number: \"{arg}\"")
+    
+    def validateText(self, text):
+        textReplacePat = re.compile(r"([A-Za-z']*)(@|&)(\w+)")
+        matches = textReplacePat.finditer(text)
+        for match in matches:
+            tag, objType, short = match.groups()
+            if objType == "&":
+                if tag != "" and not tag.lower() == "a":
+                    raise ValidationException(f"in text:\n    \"{text}\"\n    Encountered non-article conjugation for {tag}&{short}")
+                if not short in self.itemShorts:
+                    raise ValidationException(f"in text:\n    \"{text}\"\n    Encountered invalid Item shorthand: \"{tag}&{short}\"")
+            elif objType == "@":
+                if not short in self.charShorts:
+                    raise ValidationException(f"in text:\n    \"{text}\"\n    Encountered invalid Character shorthand: \"{tag}@{short}\"")
 
     def getLoadedItemsWithTags(self, tags: list[str]):
         possItems = []
-        for item in self.loadedItems:
+        for item in self.loadedItems.values():
             if item.hasAllTags(tags):
                 possItems.append(item)
         return possItems
     
     def getLoadedItemWithName(self, name: str):
         # we've guaranteed the item name is valid when this is called
-        for item in self.loadedItems:
-            if item.string() == name:
-                return [item]
+        for itemName in self.loadedItems:
+            if itemName == name:
+                return [self.loadedItems[itemName]]
     
     def getLoadedZoneWithName(self, name: str):
-        for zone in self.map.zones:
-            if zone.name == name:
-                return zone
+        zone = self.map.getZoneWithName(name)
+        if zone:
+            return zone
 
-class EventPartException(Exception):
+class ValidationException(Exception):
     """ Simple Exception for differentiating an Event's validation errors. """
     pass
 
@@ -104,64 +121,15 @@ def checkArgCount(args: list[str], argNames: list[str]):
     if not argNames[-1].startswith("*"):
         if argNames[-1].endswith("?"):
             if len(args) != ct and len(args) != ct - 1:
-                raise EventPartException(f"Needs {ct - 1} or {ct} arguments ({len(args)} recieved): {argsStr}")
+                raise ValidationException(f"Needs {ct - 1} or {ct} arguments ({len(args)} recieved): {argsStr}")
         else:
             if len(args) != ct:
-                raise EventPartException(f"Needs {ct} arguments ({len(args)} recieved): {argsStr}")
+                raise ValidationException(f"Needs {ct} arguments ({len(args)} recieved): {argsStr}")
     else:
         if argNames[-1].endswith("?"):
             ct -= 1
         if len(args) < ct:
-            raise EventPartException(f"Needs {ct} or more arguments ({len(args)} recieved): {argsStr}")
-
-def validateCharShort(name: str, valids: Valids):
-    validate(valids.isValidCharShort, name, "character shorthand")
-def validateItemShort(name: str, valids: Valids):
-    validate(valids.isValidItemShort, name, "item shorthand")
-def validateCharTag(name: str, valids: Valids):
-    validate(valids.isValidCharTag, name, "tag name")
-def validateLoadedItemTag(name: str, valids: Valids):
-    validate(valids.isLoadedItemTag, name, "item tag")
-def validateLoadedItemName(name: str, valids: Valids):
-    validate(valids.isLoadedItem, name, "specific item name")
-def validateLoadedZoneName(name: str, valids: Valids):
-    validate(valids.isLoadedZone, name, "zone name")
-
-def validate(fun: Callable, name: str, errName: str):
-    if not fun(name):
-        raise EventPartException(f"Encountered an invalid {errName}: `{name}`")
-
-def validateIsInt(arg: str):
-    for let in arg:
-        if let not in "1234567890":
-            raise EventPartException(f"{arg} is not a number, the expected argument is meant to be a number")
-
-def addCharShortToValids(name: str, valids: Valids):
-    addToValids(name, valids.addCharShort)
-def addItemShortToValids(name: str, valids: Valids):
-    addToValids(name, valids.addItemShort)
-def addTagNameToValids(name: str, valids: Valids):
-    addToValids(name, valids.addCharTag)
-
-def addToValids(name: str, addFun: Callable):
-    if not addFun:
-        raise EventPartException(f"Encountered an invalid addition name: `{name}`")
-    if not addFun(name):
-        raise EventPartException(f"Encountered a duplicate name: `{name}`")
-
-def validateText(text: str, valids: Valids):
-    textReplacePat = re.compile(r"([A-Za-z']*)(@|&)(\w+)")
-    matches = textReplacePat.finditer(text)
-    for match in matches:
-        tag, objType, short = match.groups()
-        if objType == "&":
-            if tag != "" and not tag.lower() == "a":
-                raise EventPartException(f"in text:\n    \"{text}\"\n    Encountered non-article conjugation for {tag}&{short}")
-            if not valids.isValidItemShort(short):
-                raise EventPartException(f"in text:\n    \"{text}\"\n    Encountered nonexistent item {tag}&{short}")
-        elif objType == "@":
-            if not valids.isValidCharShort(short):
-                raise EventPartException(f"in text:\n    \"{text}\"\n    Encountered nonexistent character {tag}@{short}")
+            raise ValidationException(f"Needs {ct} or more arguments ({len(args)} recieved): {argsStr}")
 
 class Suite:
     def __init__(self, charShort: str, argsLists: list[list[str]]):
@@ -178,7 +146,7 @@ class Suite:
                 if reqClass.match(args):
                     try:
                         part = reqClass.build(args, valids)
-                    except EventPartException as e:
+                    except ValidationException as e:
                         raise self.exception(args, e)
                     partsList.append(part)
                     found = True
@@ -194,4 +162,4 @@ class Suite:
                 argsStr += f"->"
             argsStr += " ".join(arg) + ", "
         argsStr = argsStr[:-2]
-        return Exception(f"in line \"{self.charShort}: {argsStr}\"\n    {e}")
+        return ValidationException(f"in line \"{self.charShort}: {argsStr}\"\n    {e}")

@@ -14,6 +14,9 @@ class Item:
     def __str__(self):
         return self.string()
     
+    def getName(self):
+        return self.name
+    
     def string(self, tag: str=None) -> str:
         toRet = self.name
         if tag:

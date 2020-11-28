@@ -1,13 +1,9 @@
 
 zones:
-  - name: Center
-    connx: Caves Jungle Tidepools
+  Center: Caves, Jungle, Tidepools
 
-  - name: Caves
-    connx: Center Tidepools Jungle
+  Caves: Center, Tidepools, Jungle
 
-  - name: Jungle
-    connx: Caves Center Tidepools
+  Jungle: Caves, Center, Tidepools
 
-  - name: Tidepools
-    connx: Caves Center Jungle
+  Tidepools: Caves, Center, Jungle

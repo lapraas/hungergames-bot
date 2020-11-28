@@ -10,7 +10,7 @@ from .State import Result, State
 
 
 class Game:
-    def __init__(self, items: list[Item], events: list[Event], tributes: list[Character], map: Map):
+    def __init__(self, items: dict[str, Item], events: dict[str, Event], tributes: dict[str, Character], map: Map):
         self.tributes = tributes
         self.items = items
         self.events = events
@@ -19,33 +19,33 @@ class Game:
         self.start()
     
     def start(self):
-        for tribute in self.tributes:
+        for tribute in self.tributes.values():
             tribute.reset()
             tribute.move(self.map.getStartingZone())
             tribute.addTag("running")
     
     def getTributeByName(self, name: str):
-        for tribute in self.tributes:
+        for tribute in self.tributes.values():
             if tribute.string() == name:
                 return tribute
         return None
     
     def getItemByName(self, name: str):
-        for item in self.items:
+        for item in self.items.values():
             if item.string() == name:
                 return item
         return None
     
     def triggerByName(self, charName, eventName) -> Union[str, Result]:
         char = None
-        for tribute in self.tributes:
+        for tribute in self.tributes.values():
             if tribute.string() == charName:
                 char = tribute
                 break
         if not char:
             return f"unable to find character named {charName}"
         event = None
-        for e in self.events:
+        for e in self.events.values():
             if e.getName() == eventName:
                 event = e
                 break
@@ -67,7 +67,7 @@ class Game:
         
     def chooseFromEvents(self, char: Character, events: list[Event]=None, state: State=None):
         if not events:
-            events = self.events
+            events = self.events.values()
         
         possibleEvents: list[Event] = []
         totalChance = 0
@@ -98,7 +98,7 @@ class Game:
     
     def round(self) -> dict[Character, Result]:
         allresults = {}
-        for tribute in self.tributes:
+        for tribute in self.tributes.values():
             if not tribute.isAlive():
                 continue
             event = self.chooseFromEvents(tribute)
