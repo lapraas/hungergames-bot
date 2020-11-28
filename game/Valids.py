@@ -86,14 +86,10 @@ class Valids:
     
     def getLoadedItemWithName(self, name: str):
         # we've guaranteed the item name is valid when this is called
-        for itemName in self.loadedItems:
-            if itemName == name:
-                return [self.loadedItems[itemName]]
+        return self.loadedItems.get(name)
     
     def getLoadedZoneWithName(self, name: str):
-        zone = self.map.getZoneWithName(name)
-        if zone:
-            return zone
+        return self.map.getZoneWithName(name)
 
 class ValidationException(Exception):
     """ Simple Exception for differentiating an Event's validation errors. """

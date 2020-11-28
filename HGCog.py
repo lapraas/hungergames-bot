@@ -1,12 +1,12 @@
 
 from game.State import Result
-from typing import Callable, Optional
+from typing import Any, Callable, KeysView, Optional, TypeVar
 from discord.embeds import Embed
 from discord.ext import commands
 from discord.ext.commands.context import Context
 
 from game.Character import Character
-from game.All import All
+from game.All import All, LoadException
 ALL = All("./yamlsources")
 
 EVENTGREEN = 0xbbff45
@@ -21,8 +21,17 @@ class HGCog(commands.Cog):
         self.game = ALL.loadGameWithSettings(["ALL"], ["ALL"], "simple", ["ALL"])
         self.resultsEmbeds: list[Embed] = []
     
+    ###
+    # Utility things
+    ###
+    
     @staticmethod
     async def getArgs(ctx: Context, args: list[str], argNames: list[str]):
+        """ Remakes the arguments to be comma-separated rather than space-separated.
+            Checks the number of args to make sure it matches what's expected.
+            If it's not what's expected, send an error embed to the Context and return None.
+            Otherwise returns the arguments. """
+        
         realArgs = [s.strip() for s in " ".join(args).split(",")]
         argNamesStr = ", ".join(argNames)
         if len(realArgs) == len(argNames):
@@ -36,13 +45,21 @@ class HGCog(commands.Cog):
     
     @staticmethod
     def makeCharEmbed(char: Character, title="", description="", color=MISCORANGE):
+        """ Initializes an Embed based on the given Character.
+            Defaults to making the title the .string() of the Character,
+            making the description empty,
+            and making the color orange. """
+        
         embed = Embed(title=char.string() if not title else title, description=description, color=color)
         url = char.getPicture()
         if url:
             embed.set_thumbnail(url=url)
         return embed
     
-    def buildEmbedFromResults(self, mc: Character, result: Result) -> Embed:
+    @staticmethod
+    def buildEmbedFromResults(mc: Character, result: Result) -> Embed:
+        """ Returns an Embed based on the Result object given by a triggered Event. """
+        
         text = "\n\n".join(result.getTexts())
         embed = HGCog.makeCharEmbed(mc, "Event", text, EVENTGREEN)
         effects = result.getEffects()
@@ -53,6 +70,10 @@ class HGCog(commands.Cog):
         return embed
     
     async def getSingleCharacter(self, ctx: Context, args: str) -> Optional[Character]:
+        """ Attempts to get a loaded Character from the game based on the given args.
+            If unsuccessful, sends an error embed to the given Context and returns None,
+            otherwise returns the Character. """
+        
         args = await HGCog.getArgs(ctx, args, ["character name"])
         if not args: return None
         charName, = args
@@ -63,12 +84,57 @@ class HGCog(commands.Cog):
                 color=ERRORRED
             )
             await ctx.send(embed=embed)
+            return None
         return char
+    
+    @staticmethod
+    def wrapAddCall(fun: Callable, callTitle: str, callDesc: str):
+        """ Catches LoadExceptions when trying to add things to ALL. """
+        try:
+            fun()
+        except LoadException as e:
+            return Embed(
+                title = callTitle,
+                description = f"Encountered error:\n\n{e}",
+                color = ERRORRED
+            )
+        return Embed(
+            title = callTitle,
+            description = callDesc,
+            color = MISCORANGE
+        )
+    
+    @staticmethod
+    def buildListEmbed(title, sorteds: tuple[str, Any], valueFun: Callable[[Any], str], inline: bool=True):
+        """ Builds an embed with a list of game objects. Used by the .list commands. """
+        embed = Embed(title=title, color=MISCORANGE)
+        for name, obj in sorteds:
+            embed.add_field(name=name, value=valueFun(obj), inline=inline)
+    
+    ############
+    # Commands #
+    ############
     
     @commands.command()
     async def ping(self, ctx: Context):
-        """ Responds with "Pong!" """
+        """ Test command. """
         await ctx.send("Pong!")
+    
+    @commands.command(aliases=["help"])
+    async def listcommands(self, ctx: Context):
+        """ Lists all commands. """
+        
+        embed = Embed(
+            title = "All commands:",
+            color = MISCORANGE
+        )
+        for command in ctx.bot.commands:
+            embed.add_field(name=command.name, value=command.help, inline=False)
+        await ctx.send(embed=embed)
+    
+    #
+    # Adds
+    #
     
     @commands.command()
     async def addchar(self, ctx: Context, *args: str):
@@ -78,20 +144,10 @@ class HGCog(commands.Cog):
         if not args: return
         charName, charGender, charURL = args
         
-        res = ALL.addCharacter(charName, [charGender, charURL])
-        if res:
-            embed = Embed(
-                title="Add Character",
-                description="Encountered error:\n\n" + res,
-                color=ERRORRED
-            )
-            await ctx.send(embed=embed)
-            return
-        
-        embed = Embed(
-            title="Add Character",
-            description=f"Added character {charName} with gender {charGender} and image URL {charURL}",
-            color=MISCORANGE
+        embed = HGCog.wrapAddCall(
+            lambda: ALL.addCharacter(charName, [charGender, charURL]),
+            "Add Character",
+            f"Added character {charName} with gender {charGender} and image URL {charURL}"
         )
         await ctx.send(embed=embed)
     
@@ -103,22 +159,16 @@ class HGCog(commands.Cog):
         if not args: return
         itemName, itemTags = args[:2]
         
-        res = ALL.addItem(itemName, itemTags)
-        if res:
-            embed = Embed(
-                title="Add Item",
-                description="Encountered error:\n\n" + res,
-                color=ERRORRED
-            )
-            await ctx.send(embed=embed)
-            return
-        
-        embed = Embed(
-            title="Add Item",
-            description=f"Added item {itemName} with tags {itemTags}",
-            color=MISCORANGE
+        embed = HGCog.wrapAddCall(
+            lambda: ALL.addItem(itemName, itemTags),
+            "Add Item",
+            f"Added item {itemName} with tags {itemTags}"
         )
         await ctx.send(embed=embed)
+    
+    #
+    # Game debugging
+    #
     
     @commands.command()
     async def reload(self, ctx: Context):
@@ -138,63 +188,8 @@ class HGCog(commands.Cog):
         result = self.game.triggerByName(charName, eventName)
         char = self.game.getTributeByName(charName)
         
-        embed = self.buildEmbedFromResults(char, result)
+        embed = HGCog.buildEmbedFromResults(char, result)
         await ctx.send(embed=embed)
-    
-    @commands.command()
-    async def round(self, ctx: Context):
-        """ Starts a game round if one is not already happening. """
-        
-        if self.resultsEmbeds:
-            embed = Embed(
-                title="There's already a round happening. Use .next to progress a round.",
-                color=ERRORRED
-            )
-            await ctx.send(embed=embed)
-            return
-        
-        charsAndResults = self.game.round()
-        self.resultsEmbeds = []
-        for char in charsAndResults:
-            result = charsAndResults[char]
-            self.resultsEmbeds.append(self.buildEmbedFromResults(char, result))
-        
-        embed = Embed(
-            title="Round start (use .next to progress a round)",
-            color=BORDERBLACK
-        )
-        await ctx.send(embed=embed)
-    
-    @commands.command()
-    async def next(self, ctx: Context):
-        """ Progresses a round if one is happening. """
-        
-        if not self.resultsEmbeds:
-            embed = Embed(
-                title="Round has ended, use `.round` to start another round.",
-                color=ERRORRED
-            )
-            await ctx.send(embed=embed)
-            return False
-        embed = self.resultsEmbeds.pop(0)
-        await ctx.send(embed=embed)
-        
-        if self.resultsEmbeds: return True
-        
-        embed = Embed(
-            title="Round end (use .round to start a new round)",
-            color=BORDERBLACK
-        )
-        await ctx.send(embed=embed)
-        return False
-    
-    @commands.command()
-    async def nextall(self, ctx: Context):
-        """ Uses the `next` command until the round is over. """
-        
-        res = await self.next(ctx)
-        while res:
-            res = await self.next(ctx)
     
     @commands.command()
     async def give(self, ctx: Context, *args: str):
@@ -237,58 +232,102 @@ class HGCog(commands.Cog):
     async def listevents(self, ctx: Context):
         """ Lists all Events currently loaded in the game. """
         
-        embed = Embed(
-            title = "All events:",
-            color = MISCORANGE
+        embed = HGCog.buildListEmbed(
+            "Loaded Events:",
+            self.game.getSortedEvents(),
+            lambda event: event.getChanceAsStr()
         )
-        for event in self.game.events:
-            embed.add_field(name=event.name, value=event.chance)
         await ctx.send(embed=embed)
     
     @commands.command()
     async def listitems(self, ctx: Context):
         """ Lists all Items currently loaded in the game. """
         
-        embed = Embed(
-            title = "All items:",
-            color = MISCORANGE
+        embed = HGCog.buildListEmbed(
+            "Loaded Items:",
+            self.game.getSortedItems(),
+            lambda item: item.getTagsStr()
         )
-        for item in self.game.items:
-            embed.add_field(name=item.string(), value=item.getTagsStr())
-        await ctx.send(embed=embed)
-    
-    @commands.command()
-    async def listcommands(self, ctx: Context):
-        """ Lists all commands. """
-        
-        embed = Embed(
-            title = "All commands:",
-            color = MISCORANGE
-        )
-        for command in ctx.bot.commands:
-            embed.add_field(name=command.name, value=command.help, inline=False)
         await ctx.send(embed=embed)
     
     @commands.command()
     async def listzones(self, ctx: Context):
         """ Lists all Zones loaded in the game. """
         
-        embed = Embed(
-            title = "Map:",
-            color = MISCORANGE
+        embed = HGCog.buildListEmbed(
+            "Loaded Zones:",
+            self.game.getSortedZones(),
+            lambda zone: zone.getConnectionsStr(),
+            False
         )
-        for zone in self.game.map.zones:
-            embed.add_field(name=zone.name, value=zone.getConnectionStr(), inline=False)
         await ctx.send(embed=embed)
     
     @commands.command()
     async def listchars(self, ctx: Context):
         """ Lists all Characters loaded in the game. """
         
-        embed = Embed(
-            title = "Characters:",
-            color = MISCORANGE
+        embed = HGCog.buildListEmbed(
+            "Loaded Characters:",
+            self.game.getSortedTributes(),
+            lambda char: char.getAliveStr()
         )
-        for character in self.game.tributes:
-            embed.add_field(name=character.string(), value=character.getLocationStr())
         await ctx.send(embed=embed)
+    
+    #
+    # Round execution
+    #
+    
+    @commands.command()
+    async def round(self, ctx: Context):
+        """ Starts a game round if one is not already happening. """
+        
+        if self.resultsEmbeds:
+            embed = Embed(
+                title="There's already a round happening. Use .next to progress a round.",
+                color=ERRORRED
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        charsAndResults = self.game.round()
+        self.resultsEmbeds = []
+        for char in charsAndResults:
+            result = charsAndResults[char]
+            self.resultsEmbeds.append(HGCog.buildEmbedFromResults(char, result))
+        
+        embed = Embed(
+            title="Round start (use .next to progress a round)",
+            color=BORDERBLACK
+        )
+        await ctx.send(embed=embed)
+    
+    @commands.command()
+    async def next(self, ctx: Context):
+        """ Progresses a round if one is happening. """
+        
+        if not self.resultsEmbeds:
+            embed = Embed(
+                title="Round has ended, use `.round` to start another round.",
+                color=ERRORRED
+            )
+            await ctx.send(embed=embed)
+            return False
+        embed = self.resultsEmbeds.pop(0)
+        await ctx.send(embed=embed)
+        
+        if self.resultsEmbeds: return True
+        
+        embed = Embed(
+            title="Round end (use .round to start a new round)",
+            color=BORDERBLACK
+        )
+        await ctx.send(embed=embed)
+        return False
+    
+    @commands.command()
+    async def nextall(self, ctx: Context):
+        """ Uses the `next` command until the round is over. """
+        
+        res = await self.next(ctx)
+        while res:
+            res = await self.next(ctx)

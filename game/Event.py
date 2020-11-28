@@ -40,6 +40,9 @@ class Event:
     
     def getChance(self):
         return RARITIES[self.chance]
+    
+    def getChanceAsStr(self):
+        return self.chance
         
     def load(self, valids: Valids):
         try:

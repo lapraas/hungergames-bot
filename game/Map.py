@@ -45,3 +45,6 @@ class Map:
     
     def getStartingZone(self):
         return self.startingZone
+    
+    def getSortedZones(self):
+        return [(name, self.zones[name]) for name in sorted(self.zones.keys())]

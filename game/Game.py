@@ -16,6 +16,11 @@ class Game:
         self.events = events
         self.map = map
         
+        self.sortedTributes = [(name, self.tributes[name]) for name in sorted(self.tributes.keys())]
+        self.sortedItems = [(name, self.items[name]) for name in sorted(self.items.keys())]
+        self.sortedEvents = [(name, self.events[name]) for name in sorted(self.events.keys())]
+        self.sortedZones = self.map.getSortedZones()
+        
         self.start()
     
     def start(self):
@@ -25,32 +30,36 @@ class Game:
             tribute.addTag("running")
     
     def getTributeByName(self, name: str):
-        for tribute in self.tributes.values():
-            if tribute.string() == name:
-                return tribute
-        return None
+        return self.tributes.get(name)
     
     def getItemByName(self, name: str):
-        for item in self.items.values():
-            if item.string() == name:
-                return item
-        return None
+        return self.items.get(name)
+    
+    def getEventByName(self, name: str):
+        return self.events.get(name)
+    
+    def getZoneByName(self, name: str):
+        return self.map.getZoneWithName(name)
+    
+    def getSortedTributes(self):
+        return self.sortedTributes
+    
+    def getSortedItems(self):
+        return self.sortedItems
+    
+    def getSortedEvents(self):
+        return self.sortedEvents
+    
+    def getSortedZones(self):
+        return self.sortedZones
     
     def triggerByName(self, charName, eventName) -> Union[str, Result]:
-        char = None
-        for tribute in self.tributes.values():
-            if tribute.string() == charName:
-                char = tribute
-                break
-        if not char:
-            return f"unable to find character named {charName}"
-        event = None
-        for e in self.events.values():
-            if e.getName() == eventName:
-                event = e
-                break
-        if not event:
-            return f"unable to find event named {eventName}"
+        char = self.getTributeByName(charName)
+        if not char: return f"unable to find character named {charName}"
+        
+        event = self.getEventByName(eventName)
+        if not event: return f"unable to find event named {eventName}"
+        
         if event.prepare(char, self.tributes):
             return self.trigger(char, event)
         

@@ -1,5 +1,4 @@
 
-from ruamel.yaml import events
 from game.Game import Game
 from game.Valids import Valids
 import os
@@ -9,10 +8,10 @@ from typing import Any, Callable, Union
 from ruamel.yaml import YAML
 yaml = YAML()
 
-from .Character import Character
-from .Event import Event
-from .Item import Item
-from .Map import Map
+from game.Character import Character
+from game.Event import Event
+from game.Item import Item
+from game.Map import Map
 
 class LoadException(Exception):
     """ Simple class differentiating errors that happen during loading. """
@@ -118,20 +117,6 @@ class All:
         
         self.characters[dotsName] = chars
     
-    def addCharacter(self, name: str, data: tuple[str, str], dotFileName="adds"):
-        if not dotFileName in self.characters: raise LoadException(f"Couldn't find a file at {dotFileName}")
-        if name in self.characters: raise LoadException(f"Tried to create duplicate Character \"{name}\"")
-        
-        targetFilePath = self.dotPathToReal(self.charsDirName, dotFileName)
-        allYaml = self.getYamlFromFile(targetFilePath)
-        
-        newCharacter = self.characterFromYaml(name, data)
-        allYaml[name] = data
-        self.replaceYamlInFile(targetFilePath, allYaml)
-        
-        self.characters[dotFileName][name] = newCharacter
-        self.allCharacters[name] = newCharacter
-    
     def itemFromYaml(self, name: str, data: str):
         return Item(name, data.split(" "))
     
@@ -147,20 +132,6 @@ class All:
             self.allItems[name] = item
         
         self.items[dotsName] = items
-    
-    def addItem(self, name: str, data: str, dotFileName="adds"):
-        if not dotFileName in self.items: raise LoadException(f"Couldn't find a file at {dotFileName}")
-        if name in self.items: raise LoadException(f"Tried to create duplicate Item {name}")
-        
-        targetFilePath = self.dotPathToReal(self.itemsDirName, dotFileName)
-        allYaml = self.getYamlFromFile(targetFilePath)
-        
-        newItem = self.itemFromYaml(name, data)
-        allYaml[name] = data
-        self.replaceYamlInFile(targetFilePath, allYaml)
-        
-        self.items[dotFileName][name] = newItem
-        self.allItems[name] = newItem
     
     def mapFromYaml(self, dotsName: str, yaml: dict[str, dict[str, str]]):
         map = Map()
@@ -259,6 +230,34 @@ class All:
         for subdir in subdirs:
             fullPath = os.path.join(dirName, subdir)
             self.build(buildFun, fullPath, subdir)
+    
+    def addCharacter(self, name: str, data: tuple[str, str], dotFileName="adds"):
+        if not dotFileName in self.characters: raise LoadException(f"Couldn't find a file at {dotFileName}")
+        if name in self.allCharacters: raise LoadException(f"Tried to create duplicate Character \"{name}\"")
+        
+        targetFilePath = self.dotPathToReal(self.charsDirName, dotFileName)
+        allYaml = self.getYamlFromFile(targetFilePath)
+        
+        newCharacter = self.characterFromYaml(name, data)
+        allYaml[name] = data
+        self.replaceYamlInFile(targetFilePath, allYaml)
+        
+        self.characters[dotFileName][name] = newCharacter
+        self.allCharacters[name] = newCharacter
+    
+    def addItem(self, name: str, data: str, dotFileName="adds"):
+        if not dotFileName in self.items: raise LoadException(f"Couldn't find a file at {dotFileName}")
+        if name in self.allItems: raise LoadException(f"Tried to create duplicate Item {name}")
+        
+        targetFilePath = self.dotPathToReal(self.itemsDirName, dotFileName)
+        allYaml = self.getYamlFromFile(targetFilePath)
+        
+        newItem = self.itemFromYaml(name, data)
+        allYaml[name] = data
+        self.replaceYamlInFile(targetFilePath, allYaml)
+        
+        self.items[dotFileName][name] = newItem
+        self.allItems[name] = newItem
 
 if __name__ == "__main__":
     all = All("./yamlsources")

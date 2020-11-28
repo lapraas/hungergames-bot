@@ -6,6 +6,7 @@ from discord.ext.commands.context import Context
 from HGCog import HGCog
 from discord.ext import commands
 client = commands.Bot(command_prefix=".")
+client.remove_command("help")
     
 client.add_cog(HGCog(client))
 
