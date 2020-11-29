@@ -54,6 +54,27 @@ def doCommand(op, *args):
         tribute = GAME.getTributeByName(charName)
         item = GAME.getItemByName(itemName)
         tribute.copyAndGiveItem(item)
+    
+    elif op == "oldround":
+        results = GAME.round()
+        for char in results:
+            result = results[char]
+            for text in result.getTexts():
+                print(text)
+            print(result.getEffects())
+            print()
+    
+    elif op == "round":
+        GAME.roundStart()
+    
+    elif op == "next":
+        result = GAME.next()
+        if not result:
+            print("Couldn't next")
+        else:
+            for text in result.getTexts():
+                print(text)
+            print(result.getEffects())
         
     elif op == "quit":
         return True

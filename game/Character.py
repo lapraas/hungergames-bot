@@ -30,6 +30,8 @@ class Character:
         self.location: Zone = None
         self.alliance: list[Character] = []
         self.alive: bool = True
+        self.age: int = 1
+        self.roundsSurvived: int = 0
     
     def __repr__(self):
         return f"Character {self.name}"
@@ -57,15 +59,17 @@ class Character:
             self.alive == o.alive
         ])
     
-    def getName(self):
-        return self.name
-    
     def reset(self):
         self.items = []
         self.tags = []
         self.location = None
         self.alliance = []
         self.alive = True
+        self.age = 1
+        self.roundsSurvived = 0
+    
+    def getName(self):
+        return self.name
     
     def getPicture(self):
         return self.imgSrc
@@ -85,9 +89,11 @@ class Character:
             elif lcTag == "themself":
                 toRet = self.flex
             elif lcTag == "they're":
-                toRet = self.subj + "'re"
-                if not self.plural:
-                    toRet = self.subj + "'s"
+                toRet = self.subj + ("'re" if self.plural else "'s")
+            elif lcTag == "weren't":
+                toRet = lcTag if self.plural else "wasn't"
+            elif lcTag == "aren't":
+                toRet = lcTag if self.plural else "isn't"
             elif tag:
                 # the tag is a verb to conjugate
                 toRet = tag
@@ -115,6 +121,19 @@ class Character:
     
     def revive(self):
         self.alive = True
+    
+    def incAge(self):
+        self.age += 1
+        if self.isAlive():
+            self.roundsSurvived += 1
+    
+    def getAge(self):
+        """ Get the total number of rounds this Character has existed. """
+        return self.age
+    
+    def getRoundsSurvived(self):
+        """ Get the total number of rounds this Character has been alive. """
+        return self.roundsSurvived
     
     def copyAndGiveItem(self, item: Item):
         copy = item.copy()

@@ -48,7 +48,10 @@ class Trove:
         for _ in range(self.count):
             self.gen.append(choice(self.pool))
     
-    def takeRandomItem(self):
+    def hasItems(self):
+        return len(self.gen) > 0
+    
+    def loot(self):
         """ Gets a random Item from this Trove's generated Items. """
         
         item = choice(self.gen)

@@ -44,19 +44,20 @@ class Event:
     def getChanceAsStr(self):
         return self.chance
         
-    def load(self, valids: Valids):
+    def load(self, valids: Valids, isSub: bool=False):
         try:
             if self.checkSuites:
                 mainCheckSuite = self.checkSuites[0]
-                mainCheckSuite.load(valids)
+                mainCheckSuite.load(valids, isSub)
                 for checkSuite in self.checkSuites[1:]:
-                    checkSuite.load(valids)
+                    checkSuite.load(valids, isSub)
                     checkSuite.addNearbyCheckIfNeeded(valids)
             
             for effectSuite in self.effectSuites:
                 effectSuite.load(valids)
+            
             for subEvent in self.sub:
-                subEvent.load(valids)
+                subEvent.load(valids, True)
             
             valids.validateText(self.text)
             
@@ -115,11 +116,11 @@ class Event:
         
         return True
     
-    def matchCharacter(self, checkSuite: CheckSuite, otherChars: list[Character]):
+    def matchCharacter(self, checkSuite: CheckSuite, otherChars: dict[str, Character]):
         # Collect a list of all matched Characters
         matchedChars: list[Character] = []
         
-        for char in otherChars:
+        for char in otherChars.values():
             # Can't match the same Character twice
             if self.state.doesCharExist(char): continue
             # Full Suite check, adding Character if it matches
@@ -128,7 +129,7 @@ class Event:
         if not matchedChars:
             return False
         
-        # Assign a random Character from the matcheed Characters to the State
+        # Assign a random Character from the matched Characters to the State
         return choice(matchedChars)
     
     def incrementTriggers(self, char: Character):

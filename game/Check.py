@@ -178,14 +178,14 @@ class LocationCheck(Check):
         return char.isIn(self.locName)
 
 class LimitCheck(Check):
-    TOTAL = "total"
-    PERCHAR = "perchar"
+    TOTAL = "limittotal"
+    PERCHAR = "limit"
     
-    args = ["type", "count type", "trigger count"]
-    matches = ["limit"]
+    args = ["count type", "trigger count"]
+    matches = [PERCHAR, TOTAL]
     
     def __init__(self, valids: Valids, *args: str):
-        _, self.cType, self.count = args
+        self.cType, self.count = args
         valids.validateIsNumber(self.count)
         self.count = int(self.count)
     
@@ -195,17 +195,42 @@ class LimitCheck(Check):
         else:
             return state.getTotalTriggers() <= self.count
 
-class TroveEmptyCheck(Check):
-    args = ["type", "trove name"]
-    matches = ["isempty"]
+class TroveCheck(Check):
+    args = ["type", "trove name", "item short"]
+    matches = ["takefrom"]
     
     def __init__(self, valids: Valids, *args: str):
-        _, self.troveName = args
+        _, self.troveName, self.newItemShort = args
         valids.validateLoadedTroveName(self.troveName)
         self.trove = valids.getLoadedTroveWithName(self.troveName)
+        valids.addItemShort(self.newItemShort)
     
     def check(self, char: Character, state: State) -> bool:
-        return self.trove.hasItems()
+        if not self.trove.hasItems():
+            return False
+        state.setItem(self.newItemShort, self.trove.loot())
+        return True
+
+class RoundCheck(Check):
+    ON = "round="
+    BEFORE = "round<"
+    AFTER = "round>"
+    
+    args = ["round comparison", "number"]
+    matches = [ON, BEFORE, AFTER]
+    
+    def __init__(self, valids: Valids, *args: str):
+        self.rType, self.number = args
+        valids.validateIsNumber(self.number)
+        self.number = int(self.number)
+    
+    def check(self, char: Character, state: State) -> bool:
+        if self.rType == RoundCheck.ON:
+            return self.number == char.getAge()
+        if self.rType == RoundCheck.BEFORE:
+            return char.getAge() < self.number
+        if self.rType == RoundCheck.AFTER:
+            return char.getAge() > self.number
 
 ALLCHECKCLASSES: list[Type[EventPart]] = [
     AliveCheck,
@@ -216,7 +241,9 @@ ALLCHECKCLASSES: list[Type[EventPart]] = [
     LimitCheck,
     LocationCheck,
     RelationCheck,
+    RoundCheck,
     TagCheck,
+    TroveCheck
 ]
 
 class CheckSuite(Suite):
@@ -225,19 +252,21 @@ class CheckSuite(Suite):
         
         self.checks: list[Check] = []
     
-    def load(self, valids: Valids):
+    def load(self, valids: Valids, isSub: bool=False):
         valids.addCharShort(self.getCharShort())
         super().load(valids, ALLCHECKCLASSES, self.checks)
-        if (not any([type(check) == AliveCheck for check in self.checks])):
-            self.checks.insert(0, AliveCheck(valids, AliveCheck.ALIVE))
+        if not isSub:
+            if (not any([type(check) == AliveCheck for check in self.checks])):
+                self.checks.insert(0, AliveCheck(valids, AliveCheck.ALIVE))
+            if (not any([type(check) == RoundCheck for check in self.checks])):
+                self.checks.insert(0, RoundCheck(valids, RoundCheck.AFTER, "1"))
     
     def addNearbyCheckIfNeeded(self, valids: Valids):
         if (not any([type(check) == AliveCheck for check in self.checks])):
             self.checks.insert(0, DistanceCheck(valids, DistanceCheck.NEARBY))
     
     def checkAll(self, char: Character, state: State):
-        allEffectTexts: list[str] = []
         for ep in self.checks:
             res = ep.check(char, state)
-            allEffectTexts.append(res)
-        return allEffectTexts
+            if not res: return False
+        return True

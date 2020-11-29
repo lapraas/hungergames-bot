@@ -1,5 +1,5 @@
 
-from random import randint
+from random import choice, randint
 from typing import Optional, Union
 
 from .Character import Character
@@ -21,13 +21,16 @@ class Game:
         self.sortedEvents = [(name, self.events[name]) for name in sorted(self.events.keys())]
         self.sortedZones = self.map.getSortedZones()
         
+        self.acted: list[Character] = []
+        self.toAct: list[Character] = []
+        
         self.start()
     
     def start(self):
         for tribute in self.tributes.values():
             tribute.reset()
+            tribute.addTag("STARTING")
             tribute.move(self.map.getStartingZone())
-            tribute.addTag("running")
     
     def getTributeByName(self, name: str):
         return self.tributes.get(name)
@@ -112,6 +115,24 @@ class Game:
                 continue
             event = self.chooseFromEvents(tribute)
             allresults[tribute] = self.trigger(tribute, event)
+            tribute.incAge()
         return allresults
-            
+    
+    def roundStart(self):
+        if self.toAct: return False
+        self.acted = []
+        self.toAct = []
+        for tribute in self.tributes.values():
+            self.toAct.append(tribute)
+    
+    def next(self):
+        if not self.toAct: return False
+        acting = choice(self.toAct)
+        self.toAct.remove(acting)
+        if not acting.isAlive():
+            return None
+        event = self.chooseFromEvents(acting)
+        result = self.trigger(acting, event)
+        acting.incAge()
+        return result
         

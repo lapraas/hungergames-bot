@@ -235,7 +235,11 @@ class All:
     # Event
     ###
     
-    def eventFromYaml(self, name: str, data: dict[str, Union[str, dict[str, str]]]):
+    def eventFromYaml(self, name: str, data: Union[str, dict[str, Union[str, dict[str, str]]]], defaultReq: list[list[str]]=[]):
+        if name == "DEFAULT":
+            if not type(data) == str:
+                raise LoadException(f"Encountered DEFAULT entry by the value ({data}) was not a string")
+            return [spaces.split(allArgs) for allArgs in commas.split(data)]
         chance = data.get("chance")
         if not chance: raise LoadException(f"\"chance\" value in event {name} not found")
         
@@ -243,26 +247,26 @@ class All:
         if not text: raise LoadException(f"\"text\" value in event {name} not found")
         text = text.strip()
         
-        checks = data.get("checks")
+        checks = data.get("req")
         if not checks: checks = {}
-        if type(checks) == str: raise LoadException(f"\"checks\" value in event {name} was a string (\"{checks}\"), needs to be a dict")
+        if type(checks) == str: raise LoadException(f"\"req\" value in event {name} was a string (\"{checks}\"), needs to be a dict")
         
         for charShort in checks:
             argsStr = checks[charShort]
             if argsStr:
-                if not type(argsStr) == str: raise LoadException(f"\"checks\" value in event {name} has an argument string ({argsStr}) of the incorrect type")
-                checks[charShort] = [spaces.split(allArgs) for allArgs in commas.split(argsStr)]
+                if not type(argsStr) == str: raise LoadException(f"\"req\" value in event {name} has an argument string ({argsStr}) of the incorrect type")
+                checks[charShort] = [*defaultReq, *[spaces.split(allArgs) for allArgs in commas.split(argsStr)]]
             else:
-                checks[charShort] = []
+                checks[charShort] = defaultReq
         
-        effects = data.get("effects")
+        effects = data.get("res")
         if not effects: effects = {}
-        if type(effects) == str: raise LoadException(f"\"effects\" value in event {name} was a string (\"{effects}\"), needs to be a dict")
+        if type(effects) == str: raise LoadException(f"\"res\" value in event {name} was a string (\"{effects}\"), needs to be a dict")
         
         for charShort in effects:
             argsStr = effects[charShort]
             if argsStr:
-                if not type(argsStr) == str: raise LoadException(f"\"effects\" value in event {name} has an argument string ({argsStr}) of the incorrect type")
+                if not type(argsStr) == str: raise LoadException(f"\"res\" value in event {name} has an argument string ({argsStr}) of the incorrect type")
                 effects[charShort] = [spaces.split(allArgs) for allArgs in commas.split(argsStr)]
             else:
                 effects[charShort] = []
@@ -279,11 +283,15 @@ class All:
     def eventsFromYaml(self, dotsName: str, yaml: dict[str, dict[str, dict[str, str]]]):
         events: dict[str, Event] = {}
         
+        defaultReq: list[list[str]] = []
         for name in yaml:
             if name in self.events: raise LoadException(f"Encountered duplicate event {name} in file {dotsName}")
             
             data = yaml[name]
-            event = self.eventFromYaml(name, data)
+            event = self.eventFromYaml(name, data, defaultReq)
+            if type(event) != Event:
+                defaultReq = event
+                continue
             events[name] = event
             self.allEvents[name] = event
             

@@ -1,7 +1,7 @@
 
 hello world sub:
   chance: common
-  checks:
+  req:
     main:
   text: |
     @main spots two cameras hidden in trees nearby - one to the left, one to the right.
@@ -18,7 +18,7 @@ hello world sub:
 
 oneoff sub:
   chance: common
-  checks:
+  req:
     main:
   text: |
     @main spots a camera hidden in the trunk of a nearby tree.
@@ -26,8 +26,8 @@ oneoff sub:
   sub:
     smash:
       chance: common
-      checks:
-        main: limit total 1
+      req:
+        main: limittotal 1
       text: |
         They@main smash@main it, rendering it useless.
     default:
@@ -37,7 +37,7 @@ oneoff sub:
 
 commune with spirits:
   chance: common
-  checks:
+  req:
     main:
     other: dead
   text: |
@@ -48,13 +48,13 @@ commune with spirits:
       chance: mythic
       text: |
         The two have a heartwarming conversation. After a while, @other miraculously fades back into existence, revived by the newfound companionship.
-      effects:
+      res:
         other: revive, ally main
     revive:
       chance: shiny
       text: |
         @other slowly begins to fade back into existence. They@other thank@other @main and the two part ways.
-      effects:
+      res:
         other: revive
     unsuccessful:
       chance: uncommon

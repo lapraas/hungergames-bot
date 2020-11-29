@@ -14,10 +14,12 @@ class State:
     
     def __init__(self, eventTriggers: dict[Character, int]):
         self.eventTriggers = eventTriggers
+        
         self.charsPool = {}
         self.itemsPool = {}
-        self.resultStrs: dict[Character, list[str]] = {}
         self.mainCharShort: str = None
+        
+        self.resultStrs: dict[Character, list[str]] = {}
     
     def getTriggersFor(self, char: Character):
         """ Gets the number of times the State's Event has triggered for a certain Character. """
@@ -91,6 +93,9 @@ class Result:
             offset += letterDiff
         
         self.texts.append(text)
+    
+    def getMainChar(self):
+        return self.mainChar
     
     def getEffects(self):
         return self.effects
