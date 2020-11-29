@@ -7,3 +7,11 @@ zones:
   Jungle: Caves, Center, Tidepools
 
   Tidepools: Caves, Center, Jungle
+
+troves:
+  Cornucopia:
+    count: 12
+    pool: ANY
+  
+  Hidden Caves:
+    has: gem, gem, gem

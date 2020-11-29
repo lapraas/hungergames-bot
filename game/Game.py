@@ -39,7 +39,7 @@ class Game:
         return self.events.get(name)
     
     def getZoneByName(self, name: str):
-        return self.map.getZoneWithName(name)
+        return self.map.getZone(name)
     
     def getSortedTributes(self):
         return self.sortedTributes

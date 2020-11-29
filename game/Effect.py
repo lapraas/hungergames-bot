@@ -142,15 +142,15 @@ class ReviveEffect(Effect):
         return f"revived: {char.string()}"
 
 ALLEFFECTCLASSES: list[Type[EventPart]] = [
-    TagEffect,
-    UntagEffect,
-    ItemEffect,
     AllyEffect,
-    LeaveEffect,
     ConsumeEffect,
-    MoveEffect,
+    ItemEffect,
     KillEffect,
-    ReviveEffect
+    LeaveEffect,
+    MoveEffect,
+    ReviveEffect,
+    TagEffect,
+    UntagEffect
 ]
 
 class EffectSuite(Suite):

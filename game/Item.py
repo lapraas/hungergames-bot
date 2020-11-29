@@ -30,6 +30,8 @@ class Item:
         return toRet
         
     def hasTag(self, tag: str) -> bool:
+        if "SECRET" in self.tags:
+            return tag == "SECRET"
         if tag == "ANY":
             return True
         return tag in self.tags

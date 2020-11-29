@@ -1,4 +1,6 @@
 
+from re import L
+from game.Trove import Trove
 from game.Game import Game
 from game.Valids import Valids
 import os
@@ -16,8 +18,8 @@ from game.Map import Map
 class LoadException(Exception):
     """ Simple class differentiating errors that happen during loading. """
 
-commaPat = re.compile(r"\s*,\s*")
-spacePat = re.compile(r"\s+")
+commas = re.compile(r"\s*,\s*")
+spaces = re.compile(r"\s+")
 
 class All:
     def __init__(self, rootPath: str, charsDirName: str="characters", itemsDirName: str="items", mapsDirName: str="maps", eventsDirName: str="events"):
@@ -52,6 +54,7 @@ class All:
         loadedMap: Map = self.loadOne(mapFile, self.maps)
         loadedEvents: dict[str, Event] = self.load(eventFiles, self.events, self.allEvents)
         
+        loadedMap.loadTroves(loadedItems)
         for event in loadedEvents.values():
             valids = Valids(loadedMap, loadedItems)
             event.load(valids)
@@ -68,7 +71,7 @@ class All:
             loaded = {**loaded, **toLoad}
         return loaded
     
-    def loadOne(self, file, objDict: dict[str, object]):
+    def loadOne(self, file, objDict: dict[str, object]) -> Any:
         toLoad = objDict.get(file)
         return toLoad
     
@@ -85,6 +88,49 @@ class All:
     def replaceYamlInFile(self, filename: str, allYaml: str):
         with open(filename, "w") as f:
             yaml.dump(allYaml, f)
+            
+    def build(self, buildFun: Callable, dirName: str, baseDotsName: str=""):
+        path = os.path.join(self.rootPath, dirName)
+        subdirs: list[str] = []
+        files: list[str] = []
+        for fName in os.listdir(path):
+            if os.path.isdir(os.path.join(path, fName)):
+                subdirs.append(fName)
+            else:
+                files.append(fName)
+                
+        for file in files:
+            if not file.endswith(".yaml"): continue
+            dotsName = file.replace(".yaml", "")
+            if baseDotsName:
+                dotsName = baseDotsName + "." + dotsName
+            allYaml = self.getYamlFromFile(os.path.join(path, file))
+            try:
+                buildFun(dotsName, allYaml)
+            except LoadException as e:
+                raise LoadException(f"In file {baseDotsName}: {e}")
+        
+        for subdir in subdirs:
+            fullPath = os.path.join(dirName, subdir)
+            self.build(buildFun, fullPath, subdir)
+        
+    def create(self, name: str, data: Any, buildFun: Callable[[str, Any], Any], objsPerFile: dict[str, dict[str, Any]], allObjs: dict[str, Any], dotFileName):
+        if not dotFileName in objsPerFile: raise LoadException(f"Couldn't find a file at {dotFileName}")
+        if name in allObjs: raise LoadException(f"Tried to create duplicate \"{name}\"")
+        
+        targetFilePath = self.dotPathToReal(self.charsDirName, dotFileName)
+        allYaml = self.getYamlFromFile(targetFilePath)
+        
+        new = buildFun(name, data)
+        allYaml[name] = data
+        self.replaceYamlInFile(targetFilePath, allYaml)
+        
+        objsPerFile[dotFileName][name] = new
+        allObjs[name] = new
+    
+    ###
+    # Character
+    ###
     
     def characterFromYaml(self, name: str, data: tuple[str, str]):
         if not len(data) >= 2: raise LoadException(f"Couldn't load character {name}, too few elements in list ({data})")
@@ -117,6 +163,13 @@ class All:
         
         self.characters[dotsName] = chars
     
+    def addCharacter(self, name: str, data: tuple[str, str], dotFileName="adds"):
+        self.create(name, data, self.characterFromYaml, self.characters, self.allCharacters, dotFileName)
+    
+    ###
+    # Item
+    ###
+    
     def itemFromYaml(self, name: str, data: str):
         return Item(name, data.split(" "))
     
@@ -133,7 +186,14 @@ class All:
         
         self.items[dotsName] = items
     
-    def mapFromYaml(self, dotsName: str, yaml: dict[str, dict[str, str]]):
+    def addItem(self, name: str, data: str, dotFileName="adds"):
+        self.create(name, data, self.itemFromYaml, self.items, self.allItems, dotFileName)
+    
+    ###
+    # Map
+    ###
+    
+    def mapFromYaml(self, dotsName: str, yaml: dict[str, dict[str, Union[str, dict[str, Union[str, int]]]]]):
         map = Map()
         zones = yaml.get("zones")
         if not zones: raise LoadException(f"Couldn't find \"zones\" value in Map")
@@ -142,13 +202,38 @@ class All:
             map.addZone(locName)
         for locName in zones:
             data = zones[locName]
-            if not data: raise LoadException(f"Couldn't find connections for zone {locName} in Map")
+            if not data: raise LoadException(f"Couldn't find connections for zone \"{locName}\" in Map")
             connections = data.split(", ")
             for connection in connections:
-                if not map.getZoneWithName(connection): LoadException(f"Found invalid connection {connection} in {locName} in Map")
+                if not map.getZone(connection): LoadException(f"Found invalid connection \"{connection}\" in \"{locName}\" in Map")
             map.connectZone(locName, connections)
         
+        troves = yaml.get("troves")
+        if not troves: troves = {}
+        
+        for troveName in troves:
+            data = troves[troveName]
+            pool = data.get("pool", [])
+            count = data.get("count", 0)
+            if pool and not count: raise LoadException(f"Trove had `pool` value but no `count` value, `count` must be at least 1")
+            if (not pool) and count: raise LoadException(f"Trove had `count` value but no `pool` value, `pool` must exist to randomly choose Items")
+            has = data.get("has", [])
+            if not (pool or has): raise LoadException(f"Trove requires either \"pool\" or \"has\" values, neither were found in Trove \"{troveName}\"")
+            if pool:
+                pool = commas.split(pool)
+                pool = [spaces.split(tags) for tags in pool]
+                for tags in pool:
+                    if tags[0] == "": raise LoadException(f"Got an empty \"pool\" tag list entry")
+            if has:
+                has = commas.split(has)
+            trove = Trove(troveName, count, pool, has)
+            map.addTrove(trove)
+        
         self.maps[dotsName] = map
+    
+    ###
+    # Event
+    ###
     
     def eventFromYaml(self, name: str, data: dict[str, Union[str, dict[str, str]]]):
         chance = data.get("chance")
@@ -166,7 +251,7 @@ class All:
             argsStr = checks[charShort]
             if argsStr:
                 if not type(argsStr) == str: raise LoadException(f"\"checks\" value in event {name} has an argument string ({argsStr}) of the incorrect type")
-                checks[charShort] = [spacePat.split(allArgs) for allArgs in commaPat.split(argsStr)]
+                checks[charShort] = [spaces.split(allArgs) for allArgs in commas.split(argsStr)]
             else:
                 checks[charShort] = []
         
@@ -178,7 +263,7 @@ class All:
             argsStr = effects[charShort]
             if argsStr:
                 if not type(argsStr) == str: raise LoadException(f"\"effects\" value in event {name} has an argument string ({argsStr}) of the incorrect type")
-                effects[charShort] = [spacePat.split(allArgs) for allArgs in commaPat.split(argsStr)]
+                effects[charShort] = [spaces.split(allArgs) for allArgs in commas.split(argsStr)]
             else:
                 effects[charShort] = []
         
@@ -203,53 +288,6 @@ class All:
             self.allEvents[name] = event
             
         self.events[dotsName] = events
-            
-    def build(self, buildFun: Callable, dirName: str, baseDotsName: str=""):
-        path = os.path.join(self.rootPath, dirName)
-        subdirs: list[str] = []
-        files: list[str] = []
-        for fName in os.listdir(path):
-            if os.path.isdir(os.path.join(path, fName)):
-                subdirs.append(fName)
-            else:
-                files.append(fName)
-                
-        for file in files:
-            if not file.endswith(".yaml"): continue
-            dotsName = file.replace(".yaml", "")
-            if baseDotsName:
-                dotsName = baseDotsName + "." + dotsName
-            with open(os.path.join(path, file), "r") as f:
-                allYaml = yaml.load(f)
-                if not allYaml: allYaml = {}
-                try:
-                    buildFun(dotsName, allYaml)
-                except LoadException as e:
-                    raise LoadException(f"In file {baseDotsName}: {e}")
-        
-        for subdir in subdirs:
-            fullPath = os.path.join(dirName, subdir)
-            self.build(buildFun, fullPath, subdir)
-        
-    def create(self, name: str, data: Any, buildFun: Callable[[str, Any], Any], objsPerFile: dict[str, dict[str, Any]], allObjs: dict[str, Any], dotFileName):
-        if not dotFileName in objsPerFile: raise LoadException(f"Couldn't find a file at {dotFileName}")
-        if name in allObjs: raise LoadException(f"Tried to create duplicate \"{name}\"")
-        
-        targetFilePath = self.dotPathToReal(self.charsDirName, dotFileName)
-        allYaml = self.getYamlFromFile(targetFilePath)
-        
-        new = buildFun(name, data)
-        allYaml[name] = data
-        self.replaceYamlInFile(targetFilePath, allYaml)
-        
-        objsPerFile[dotFileName][name] = new
-        allObjs[name] = new
-    
-    def addCharacter(self, name: str, data: tuple[str, str], dotFileName="adds"):
-        self.create(name, data, self.characterFromYaml, self.characters, self.allCharacters, dotFileName)
-    
-    def addItem(self, name: str, data: str, dotFileName="adds"):
-        self.create(name, data, self.itemFromYaml, self.items, self.allItems, dotFileName)
 
 if __name__ == "__main__":
     all = All("./yamlsources")

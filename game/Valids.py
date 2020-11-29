@@ -51,12 +51,17 @@ class Valids:
             raise ValidationException(f"Encountered an invalid Item name (is it loaded?): \"{name}\"")
     
     def validateLoadedItemTag(self, name: str):
-        if not name in self.loadedItemTags and not name == "ANY":
+        if name == "ANY" or name == "SECRET": return
+        if not name in self.loadedItemTags:
             raise ValidationException(f"Encountered an invalid Item tag: \"{name}\"")
     
     def validateLoadedZoneName(self, name: str):
         if not name in self.map.zones:
             raise ValidationException(f"Encountered an invalid Zone name: \"{name}\"")
+    
+    def validateLoadedTroveName(self, name: str):
+        if not name in self.map.troves:
+            raise ValidationException(f"Encountered an invalid Trove name: \"{name}\"")
     
     def validateIsNumber(self, arg):
         for let in arg:
@@ -89,7 +94,10 @@ class Valids:
         return self.loadedItems.get(name)
     
     def getLoadedZoneWithName(self, name: str):
-        return self.map.getZoneWithName(name)
+        return self.map.getZone(name)
+    
+    def getLoadedTroveWithName(self, name: str):
+        return self.map.getTrove(name)
 
 class ValidationException(Exception):
     """ Simple Exception for differentiating an Event's validation errors. """

@@ -7,7 +7,7 @@ from game.Item import Item
 class Trove:
     """ A collection of random Items that Events can give Characters. """
     
-    def __init__(self, name: str, count: int, pool: list[Union[str, list[str]]], has: list[str]):
+    def __init__(self, name: str, count: int, pool: list[list[str]], has: list[str]):
         self.name = name
         # Number of items total in the Trove (not including guaranteed items)
         self.count = count
@@ -20,25 +20,31 @@ class Trove:
         # A list of Items which have been generated
         self.gen: list[Item] = []
     
+    def getName(self):
+        return self.name
+    
     def reset(self):
         self.pool = []
         self.gen = []
     
-    def load(self, loadedItems: list[Item]):
+    def load(self, loadedItems: dict[str, Item]):
         """ Populates the Trove's generated items. """
         
-        for item in loadedItems:
-            for tagList in self.tagsPool:
-                if type(tagList) == str and tagList.startswith("="):
-                    targetName = tagList[1:]
-                    if item.getName() == targetName:
-                        self.pool.append(item)
-                else:
-                    if item.hasAllTags(tagList):
-                        self.pool.append(item)
-            for targetName in self.has:
-                if item.getName() == targetName:
-                    self.gen.append(item)
+        for tagList in self.tagsPool:
+            if tagList[0].startswith("="):
+                targetName = tagList[0][1:]
+                item = loadedItems.get(targetName)
+                if not item: raise Exception(f"Encountered invalid specific item name in Trove \"{self.name}\"'s pool: \"{targetName}\"")
+                self.pool.append(item.copy())
+            for item in loadedItems.values():
+                if item.hasAllTags(tagList):
+                    self.pool.append(item.copy())
+        
+        for targetName in self.has:
+            item = loadedItems.get(targetName)
+            if not item: raise Exception(f"Encountered invalid specific item name in Trove \"{self.name}\"'s guaranteed items: \"{targetName}\"")
+            self.gen.append(item.copy())
+        
         for _ in range(self.count):
             self.gen.append(choice(self.pool))
     

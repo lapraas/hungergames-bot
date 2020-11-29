@@ -146,8 +146,6 @@ class Character:
     
     def move(self, newLocation: str):
         self.location = newLocation
-        if self.hasTag("running"):
-            self.removeTag("running")
     
     def moveRandom(self):
         self.move(self.location.getRandomConnection())

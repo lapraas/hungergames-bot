@@ -17,7 +17,7 @@ class Check(EventPart):
             Returns True if so, False otherwise. """
         pass
 
-class NearbyCheck(Check):
+class DistanceCheck(Check):
     NEARBY = "nearby"
     ANYDISTANCE = "anydistance"
     
@@ -25,7 +25,7 @@ class NearbyCheck(Check):
     matches = [NEARBY, ANYDISTANCE]
     
     def __init__(self, valids: Valids, *args: str):
-        if len(args) == 2 and args[0] == NearbyCheck.NEARBY:
+        if len(args) == 2 and args[0] == DistanceCheck.NEARBY:
             self.state, self.targetShort = args
             valids.validateCharShort(self.targetShort)
         else:
@@ -33,7 +33,7 @@ class NearbyCheck(Check):
             self.targetShort = None
     
     def check(self, char: Character, state: State) -> bool:
-        if self.state == NearbyCheck.NEARBY:
+        if self.state == DistanceCheck.NEARBY:
             target = state.getChar(self.targetShort)
             return char.isNearby(target)
         else:
@@ -195,16 +195,28 @@ class LimitCheck(Check):
         else:
             return state.getTotalTriggers() <= self.count
 
+class TroveEmptyCheck(Check):
+    args = ["type", "trove name"]
+    matches = ["isempty"]
+    
+    def __init__(self, valids: Valids, *args: str):
+        _, self.troveName = args
+        valids.validateLoadedTroveName(self.troveName)
+        self.trove = valids.getLoadedTroveWithName(self.troveName)
+    
+    def check(self, char: Character, state: State) -> bool:
+        return self.trove.hasItems()
+
 ALLCHECKCLASSES: list[Type[EventPart]] = [
-    NearbyCheck,
     AliveCheck,
     AloneCheck,
+    CreateCheck,
+    DistanceCheck,
+    ItemCheck,
+    LimitCheck,
+    LocationCheck,
     RelationCheck,
     TagCheck,
-    ItemCheck,
-    CreateCheck,
-    LocationCheck,
-    LimitCheck
 ]
 
 class CheckSuite(Suite):
@@ -221,7 +233,7 @@ class CheckSuite(Suite):
     
     def addNearbyCheckIfNeeded(self, valids: Valids):
         if (not any([type(check) == AliveCheck for check in self.checks])):
-            self.checks.insert(0, NearbyCheck(valids, NearbyCheck.NEARBY))
+            self.checks.insert(0, DistanceCheck(valids, DistanceCheck.NEARBY))
     
     def checkAll(self, char: Character, state: State):
         allEffectTexts: list[str] = []
