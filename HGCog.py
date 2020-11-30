@@ -1,5 +1,7 @@
 
 from os import stat
+
+from discord.errors import NotFound
 from game.State import Result
 from typing import Any, Callable, KeysView, Optional, TypeVar
 from discord.embeds import Embed
@@ -20,12 +22,25 @@ BORDERBLACK = 0x000000
 class HGCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.game = ALL.loadGameWithSettings([""], [""], "simplespelunky", [""])
-        self.resultsEmbeds: list[Embed] = []
-    
+        self.charactersSet = [""]
+        self.itemsSet = ["spelunky"]
+        self.mapSet = "simplespelunky"
+        self.eventsSet = ["spelunky"]
+        self.game = self.getNewGame()
+        self.game.start()
+        self.game.round()
+        
     ###
     # Utility things
     ###
+    
+    def getNewGame(self):
+        return ALL.loadGameWithSettings(
+            self.charactersSet,
+            self.itemsSet,
+            self.mapSet,
+            self.eventsSet
+        )
     
     @staticmethod
     def getErrorEmbed(title, description=None):
@@ -191,7 +206,7 @@ class HGCog(commands.Cog):
             self.mapSet = args[2].strip()
             self.eventsSet = [a.strip() for a in args[3].split(" ")]
             
-            self.game = ALL.loadGameWithSettings(self.charactersSet, self.itemsSet, self.mapSet, self.eventsSet)
+            self.game = self.getNewGame()
         except LoadException as e:
             await ctx.send(embed=HGCog.getExceptionEmbed("Loading new game", e))
             return
@@ -213,7 +228,7 @@ class HGCog(commands.Cog):
         """ Starts a game round if one is not already happening. """
         try:
             await ctx.message.delete()
-        except Forbidden:
+        except (Forbidden, NotFound):
             pass
         
         res = self.game.round()
@@ -237,7 +252,7 @@ class HGCog(commands.Cog):
         try:
             if ctx.message:
                 await ctx.message.delete()
-        except Forbidden:
+        except (Forbidden, NotFound):
             pass
         
         res = self.game.next()

@@ -168,9 +168,7 @@ class EffectSuite(Suite):
     
     def performAll(self, char: Character, state: State):
         allEffectTexts: list[str] = []
-        print(f"loaded effects: {self.effects}")
         for effect in self.effects:
-            print(f"performing effect {effect}")
             res = effect.perform(char, state)
             allEffectTexts.append(res)
         return allEffectTexts

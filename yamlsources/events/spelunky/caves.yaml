@@ -1,0 +1,11 @@
+
+_DEFAULT caves: in Caves
+
+hide in caves:
+  chance: mythic
+  req:
+    main: alone, tag !running
+  text: |
+    While @main is wandering through the dark caves, they@main spot@main a particularly tucked-away alcove. An idea pops into their@main head and they@main crawl@main in.
+  res:
+    main: tag hiding

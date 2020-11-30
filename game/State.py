@@ -76,17 +76,20 @@ class Result:
         """ Replaces all shorthands in an Event's text result with their respective Character or Item.
             Also handles pronouns, articles, and verb conjugation.
             Adds the replaced text. """
-        textReplacePat = re.compile(r"([A-Za-z']*)(@|&)(\w+)")
+        textReplacePat = re.compile(r"([A-Za-z'\\]*)(@|&)(\w+)")
         matches = textReplacePat.finditer(text)
         offset = 0
         for match in matches:
-            toConj, objType, short = match.groups()
-            replaceObj = None
-            if objType == "@":
-                replaceObj = state.getChar(short)
-            elif objType == "&":
-                replaceObj = state.getItem(short)
-            replaceText = replaceObj.string(toConj)
+            tag, objType, short = match.groups()
+            if tag.endswith("\\"):
+                replaceText = tag.replace("\\", "")
+            else:
+                replaceObj = None
+                if objType == "@":
+                    replaceObj = state.getChar(short)
+                elif objType == "&":
+                    replaceObj = state.getItem(short)
+                replaceText = replaceObj.string(tag)
             
             text = text[:match.start() - offset] + replaceText + text[match.end() - offset:]
             letterDiff = match.end() - match.start() - len(replaceText)

@@ -36,6 +36,13 @@ def _match_url(url):
         return False
         
 class Character:
+    
+    ###
+    #
+    # Python overrides
+    #
+    ###
+    
     def __init__(self, name: str, imgSrc: str, pronouns: tuple[str, str, str, str, bool]):
         self.name = name
         self.imgSrc = imgSrc if _match_url(imgSrc) else None
@@ -43,6 +50,18 @@ class Character:
             #print(f"got bad image url for character {self.string()}")
             pass
         self.subj, self.obj, self.plur1, self.plur2, self.flex, self.plural = pronouns
+        self.replaces = {
+            "they": self.subj,
+            "them": self.obj,
+            "their": self.plur1,
+            "theirs": self.plur2,
+            "themself": self.flex,
+            "they're": self.subj + ("'re" if self.plural else "'s"),
+            "they've": self.subj + ("'ve" if self.plural else "'s"),
+            "they'll": self.subj + "'ll",
+            "weren't": "weren't" if self.plural else "wasn't",
+            "aren't": "aren't" if self.plural else "isn't"
+        }
         
         self.items: list[Item] = []
         self.tags: list[Tag] = []
@@ -78,6 +97,12 @@ class Character:
             self.alive == o.alive
         ])
     
+    ###
+    #
+    # Called by Game
+    #
+    ###
+    
     def reset(self):
         self.items = []
         self.tags = []
@@ -87,36 +112,54 @@ class Character:
         self.age = 0
         self.roundsSurvived = 0
     
-    def getName(self):
-        return self.name
+    def incAge(self):
+        self.age += 1
+        if self.isAlive():
+            self.roundsSurvived += 1
+        
+        toRemove: list[Tag] = []
+        for tag in self.tags:
+            tag.changeAge()
+            if tag.isExpired():
+                toRemove.append(tag)
+        for tag in toRemove:
+            self.tags.remove(tag)
+    
+    ###
+    #
+    # Getters
+    #
+    ###
+    
+    # Misc
     
     def getPicture(self):
         return self.imgSrc
+    
+    # Alive
+    
+    def isAlive(self):
+        return self.alive
+    
+    def getAge(self):
+        """ Get the total number of rounds this Character has existed. """
+        return self.age
+    
+    def getRoundsSurvived(self):
+        """ Get the total number of rounds this Character has been alive. """
+        return self.roundsSurvived
+    
+    # Name
+    
+    def getName(self):
+        return self.name
         
     def string(self, tag: str = None) -> str:
         toRet = self.name
         if tag:
             lcTag = tag.lower()
-            if lcTag == "they":
-                toRet = self.subj
-            elif lcTag == "them":
-                toRet = self.obj
-            elif lcTag == "their":
-                toRet = self.plur1
-            elif lcTag == "theirs":
-                toRet = self.plur2
-            elif lcTag == "themself":
-                toRet = self.flex
-            elif lcTag == "they're":
-                toRet = self.subj + ("'re" if self.plural else "'s")
-            elif lcTag == "they've":
-                toRet = self.subj + ("'ve" if self.plural else "'s")
-            elif lcTag == "they'll":
-                toRet = self.subj + "'ll"
-            elif lcTag == "weren't":
-                toRet = lcTag if self.plural else "wasn't"
-            elif lcTag == "aren't":
-                toRet = lcTag if self.plural else "isn't"
+            if lcTag in self.replaces:
+                toRet = self.replaces[lcTag]
             elif tag:
                 # the tag is a verb to conjugate
                 toRet = tag
@@ -126,16 +169,32 @@ class Character:
                 return toRet.capitalize()
         return toRet
     
-    def addTag(self, tag: str, lasts: int=0):
-        if self.hasTag(tag): return
-        if lasts:
-            self.tags.append(Tag(tag, lasts))
-        else:
-            self.tags.append(Tag(tag, 0, True))
+    # Location
     
-    def removeTag(self, tagName: str):
-        tag = self.getTag(tagName)
-        self.tags.remove(tag)
+    def getLocation(self) -> Zone:
+        return self.location
+    
+    def isIn(self, loc: str) -> bool:
+        return self.location.name == loc
+    
+    def isNearby(self, other: Character):
+        return self.getLocation() == other.getLocation()
+    
+    # Items
+    
+    def getItemByTags(self, tags: list[str]) -> Optional[Item]:
+        for item in self.items:
+            if item.hasAllTags(tags):
+                return item
+        return None
+    
+    def getItemByName(self, itemName: str) -> Optional[Item]:
+        for item in self.items:
+            if item.getName() == itemName:
+                return item
+        return None
+    
+    # Tags
     
     def getTag(self, tagName: str):
         for tag in self.tags:
@@ -164,87 +223,18 @@ class Character:
     def hasTagUnderAge(self, tagName: str, age: int):
         return self.compareTagAge(tagName, age, lambda t, a: t < a)
     
-    def isAlive(self):
-        return self.alive
-    
-    def kill(self):
-        self.alive = False
-    
-    def revive(self):
-        self.alive = True
-    
-    def incAge(self):
-        self.age += 1
-        if self.isAlive():
-            self.roundsSurvived += 1
-        
-        toRemove: list[Tag] = []
-        for tag in self.tags:
-            tag.changeAge()
-            if tag.isExpired():
-                toRemove.append(tag)
-        for tag in toRemove:
-            self.tags.remove(tag)
-    
-    def getAge(self):
-        """ Get the total number of rounds this Character has existed. """
-        return self.age
-    
-    def getRoundsSurvived(self):
-        """ Get the total number of rounds this Character has been alive. """
-        return self.roundsSurvived
-    
-    def copyAndGiveItem(self, item: Item):
-        copy = item.copy()
-        self.items.append(copy)
-    
-    def getItemByTags(self, tags: list[str]) -> Optional[Item]:
-        for item in self.items:
-            if item.hasAllTags(tags):
-                return item
-        return None
-    
-    def getItemByName(self, itemName: str) -> Optional[Item]:
-        for item in self.items:
-            if item.getName() == itemName:
-                return item
-        return None
-    
-    def takeItem(self, item: Item):
-        self.items.remove(item)
-    
-    def getLocation(self) -> Zone:
-        return self.location
-    
-    def isIn(self, loc: str) -> bool:
-        return self.location.name == loc
-    
-    def isNearby(self, other: Character):
-        return self.getLocation() == other.getLocation()
-    
-    def move(self, newLocation: Zone):
-        self.location = newLocation
-    
-    def moveRandom(self):
-        self.move(self.location.getRandomConnection())
+    # Relations
     
     def isAlone(self):
         return len(self.alliance) == 0
     
     def getAlliance(self):
         return self.alliance
-    
-    def joinAlliance(self, alliance: list[Character]):
-        self.alliance = alliance
-        self.alliance.append(self)
-    
-    def leaveAlliance(self):
-        if self.isAlone(): return
-        self.alliance.remove(self)
-        self.alliance = []
         
     def isAllyOf(self, other: Character):
         return other in self.alliance
+    
+    # Display stats
     
     def getLocationStr(self):
         if not self.location: return "No location"
@@ -264,3 +254,56 @@ class Character:
     
     def getAliveStr(self):
         return "Alive" if self.alive else "Dead"
+    
+    ###
+    #
+    # Event performs
+    #
+    ###
+    
+    # Status
+    
+    def kill(self):
+        self.alive = False
+    
+    def revive(self):
+        self.alive = True
+    
+    # Tags
+    
+    def addTag(self, tag: str, lasts: int=0):
+        if self.hasTag(tag): return
+        if lasts:
+            self.tags.append(Tag(tag, lasts))
+        else:
+            self.tags.append(Tag(tag, 0, True))
+    
+    def removeTag(self, tagName: str):
+        tag = self.getTag(tagName)
+        self.tags.remove(tag)
+    
+    # Items
+    
+    def copyAndGiveItem(self, item: Item):
+        copy = item.copy()
+        self.items.append(copy)
+    
+    def takeItem(self, item: Item):
+        self.items.remove(item)
+    
+    # Locations
+    
+    def move(self, newLocation: Zone):
+        self.location = newLocation
+    
+    def moveRandom(self):
+        self.move(self.location.getRandomConnection())
+    
+    def joinAlliance(self, alliance: list[Character]):
+        self.alliance = alliance
+        self.alliance.append(self)
+    
+    def leaveAlliance(self):
+        if self.isAlone(): return
+        self.alliance.remove(self)
+        self.alliance = []

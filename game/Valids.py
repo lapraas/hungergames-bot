@@ -69,10 +69,11 @@ class Valids:
                 raise ValidationException(f"Encountered an invalid argument, expceted number: \"{arg}\"")
     
     def validateText(self, text):
-        textReplacePat = re.compile(r"([A-Za-z']*)(@|&)(\w+)")
+        textReplacePat = re.compile(r"([A-Za-z'\\]*)(@|&)(\w+)")
         matches = textReplacePat.finditer(text)
         for match in matches:
             tag, objType, short = match.groups()
+            if tag.endswith("\\"): continue
             if objType == "&":
                 if tag != "" and not tag.lower() == "a":
                     raise ValidationException(f"in text:\n    \"{text}\"\n    Encountered non-article conjugation for {tag}&{short}")

@@ -14,7 +14,7 @@ cornucopia start:
       req:
         main: takefrom Cornucopia loot
       text: |
-        They@main find@main a&loot, snatch@main it, and run@main.
+        They@main find@main a&loot, grab@main it, and run@main.
       res:
         main: give loot, tag running 2
     
