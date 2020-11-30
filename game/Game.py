@@ -21,16 +21,10 @@ class Game:
         self.sortedEvents = [(name, self.events[name]) for name in sorted(self.events.keys())]
         self.sortedZones = self.map.getSortedZones()
         
+        self.inProgress = False
+        
         self.acted: list[Character] = []
         self.toAct: list[Character] = []
-        
-        self.start()
-    
-    def start(self):
-        for tribute in self.tributes.values():
-            tribute.reset()
-            tribute.addTag("STARTING")
-            tribute.move(self.map.getStartingZone())
     
     def getTributeByName(self, name: str):
         return self.tributes.get(name)
@@ -68,16 +62,17 @@ class Game:
         
         return "Trigger failed"
     
-    def trigger(self, char: Character, event: Event, results: Optional[Result]=None) -> Result:
+    def trigger(self, char: Character, event: Event, results: Optional[Result]=None) -> Optional[Result]:
         if not results:
             results = Result(char)
         state, subEvents = event.trigger(results)
         if subEvents:
             sub = self.chooseFromEvents(char, subEvents, state)
+            if not sub: return results
             self.trigger(char, sub, results)
         return results
         
-    def chooseFromEvents(self, char: Character, events: list[Event]=None, state: State=None):
+    def chooseFromEvents(self, char: Character, events: list[Event]=None, state: State=None) -> Optional[Event]:
         if not events:
             events = self.events.values()
         
@@ -106,33 +101,43 @@ class Game:
             if choice >= count and choice < (count + event.getChance()):
                 return event
             count = count + event.getChance()
+        if not char.isAlive():
+            return None
         raise Exception(f"Invalid choice when choosing from events ({choice} out of {totalChance})")
     
-    def round(self) -> dict[Character, Result]:
-        allresults = {}
+    def start(self):
+        if self.inProgress: return False
+        self.inProgress = True
         for tribute in self.tributes.values():
-            if not tribute.isAlive():
-                continue
-            event = self.chooseFromEvents(tribute)
-            allresults[tribute] = self.trigger(tribute, event)
-            tribute.incAge()
-        return allresults
+            tribute.reset()
+            tribute.move(self.map.getStartingZone())
+        for trove in self.map.troves.values():
+            trove.reset()
+            trove.load(self.items)
+        return True
     
-    def roundStart(self):
-        if self.toAct: return False
+    def round(self) -> Optional[bool]:
+        if self.toAct: return True
+        if not self.inProgress: return False
+        
         self.acted = []
         self.toAct = []
         for tribute in self.tributes.values():
             self.toAct.append(tribute)
     
-    def next(self):
-        if not self.toAct: return False
+    def next(self) -> Union[Result, bool, None]:
+        if not self.toAct: return True
+        if not self.inProgress: return False
+        
         acting = choice(self.toAct)
         self.toAct.remove(acting)
-        if not acting.isAlive():
-            return None
-        event = self.chooseFromEvents(acting)
-        result = self.trigger(acting, event)
+        
         acting.incAge()
+        event = self.chooseFromEvents(acting)
+        if not event: return None
+        result = self.trigger(acting, event)
         return result
+    
+    def isRoundGoing(self) -> bool:
+        return len(self.toAct) != 0
         

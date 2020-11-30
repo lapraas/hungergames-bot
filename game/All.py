@@ -1,19 +1,21 @@
 
-from re import L
-from game.Trove import Trove
-from game.Game import Game
-from game.Valids import Valids
+from collections import OrderedDict
 import os
+from os import stat
 import re
 from typing import Any, Callable, Union
 
 from ruamel.yaml import YAML
+from ruamel.yaml.scalarstring import LiteralScalarString as YAMLString
 yaml = YAML()
 
 from game.Character import Character
 from game.Event import Event
 from game.Item import Item
 from game.Map import Map
+from game.Trove import Trove
+from game.Game import Game
+from game.Valids import Valids
 
 class LoadException(Exception):
     """ Simple class differentiating errors that happen during loading. """
@@ -48,44 +50,52 @@ class All:
         res = self.build(self.eventsFromYaml, self.eventsDirName)
         if res: raise LoadException(res)
     
-    def loadGameWithSettings(self, characterFiles: list[str], itemFiles: list[str], mapFile: str, eventFiles: list[str]):
-        loadedCharacters: dict[str, Character] = self.load(characterFiles, self.characters, self.allCharacters)
-        loadedItems: dict[str, Item] = self.load(itemFiles, self.items, self.allItems)
-        loadedMap: Map = self.loadOne(mapFile, self.maps)
-        loadedEvents: dict[str, Event] = self.load(eventFiles, self.events, self.allEvents)
+    def loadGameWithSettings(self, characters: list[str], items: list[str], map: str, events: list[str]):
+        loadedCharacters: dict[str, Character] = All.load(characters, self.characters)
+        loadedItems: dict[str, Item] = All.load(items, self.items)
+        loadedMap: Map = All.loadOne(map, self.maps)
+        loadedEvents: dict[str, Event] = All.load(events, self.events)
         
-        loadedMap.loadTroves(loadedItems)
         for event in loadedEvents.values():
             valids = Valids(loadedMap, loadedItems)
             event.load(valids)
         
         return Game(loadedItems, loadedEvents, loadedCharacters, loadedMap)
     
-    def load(self, files: str, objsPerFile: dict[str, dict[str, Any]], allObjs: dict[str, Any]) -> dict[str, Any]:
+    @staticmethod
+    def load(files: str, objsPerFile: dict[str, dict[str, Any]]) -> dict[str, Any]:
         loaded = {}
         for file in files:
-            if file == "ALL":
-                loaded = allObjs
-                break
-            toLoad = objsPerFile.get(file)
-            loaded = {**loaded, **toLoad}
+            found = False
+            for dotsName in objsPerFile:
+                if dotsName.startswith(file):
+                    found = True
+                    toLoad = objsPerFile.get(dotsName)
+                    loaded = {**loaded, **toLoad}
+            if not found:
+                raise LoadException(f"Couldn't find any game object files with the name {file}")
         return loaded
     
-    def loadOne(self, file, objDict: dict[str, object]) -> Any:
+    @staticmethod
+    def loadOne(file, objDict: dict[str, object]) -> Any:
         toLoad = objDict.get(file)
+        if not toLoad:
+            raise LoadException(f"Couldn't find any game object files with the name {file}")
         return toLoad
     
     def dotPathToReal(self, dirName: str, dotPath: str):
         path = os.path.join(self.rootPath, dirName, *dotPath.split("."))
         return path + ".yaml"
     
-    def getYamlFromFile(self, filename: str):
+    @staticmethod
+    def getYamlFromFile(filename: str):
         with open(filename, "r") as f:
             allYaml = yaml.load(f)
             if not allYaml: allYaml = {}
             return allYaml
     
-    def replaceYamlInFile(self, filename: str, allYaml: str):
+    @staticmethod
+    def replaceYamlInFile(filename: str, allYaml: str):
         with open(filename, "w") as f:
             yaml.dump(allYaml, f)
             
@@ -104,11 +114,11 @@ class All:
             dotsName = file.replace(".yaml", "")
             if baseDotsName:
                 dotsName = baseDotsName + "." + dotsName
-            allYaml = self.getYamlFromFile(os.path.join(path, file))
+            allYaml = All.getYamlFromFile(os.path.join(path, file))
             try:
                 buildFun(dotsName, allYaml)
             except LoadException as e:
-                raise LoadException(f"In file {baseDotsName}: {e}")
+                raise LoadException(f"In file {dotsName}: {e}")
         
         for subdir in subdirs:
             fullPath = os.path.join(dirName, subdir)
@@ -116,14 +126,14 @@ class All:
         
     def create(self, name: str, data: Any, buildFun: Callable[[str, Any], Any], objsPerFile: dict[str, dict[str, Any]], allObjs: dict[str, Any], dotFileName):
         if not dotFileName in objsPerFile: raise LoadException(f"Couldn't find a file at {dotFileName}")
-        if name in allObjs: raise LoadException(f"Tried to create duplicate \"{name}\"")
+        if name in allObjs: raise LoadException(f"Tried to create duplicate `{name}`")
         
         targetFilePath = self.dotPathToReal(self.charsDirName, dotFileName)
-        allYaml = self.getYamlFromFile(targetFilePath)
+        allYaml = All.getYamlFromFile(targetFilePath)
         
         new = buildFun(name, data)
         allYaml[name] = data
-        self.replaceYamlInFile(targetFilePath, allYaml)
+        All.replaceYamlInFile(targetFilePath, allYaml)
         
         objsPerFile[dotFileName][name] = new
         allObjs[name] = new
@@ -132,7 +142,8 @@ class All:
     # Character
     ###
     
-    def characterFromYaml(self, name: str, data: tuple[str, str]):
+    @staticmethod
+    def characterFromYaml(name: str, data: tuple[str, str]):
         if not len(data) >= 2: raise LoadException(f"Couldn't load character {name}, too few elements in list ({data})")
         
         gender = data[0]
@@ -157,20 +168,22 @@ class All:
         for name in yaml:
             if name in self.allCharacters: raise LoadException(f"Encountered duplicate Character {name} in file {dotsName}")
             data = yaml[name]
-            char = self.characterFromYaml(name, data)
+            char = All.characterFromYaml(name, data)
             chars[name] = char
             self.allCharacters[name] = char
         
         self.characters[dotsName] = chars
     
     def addCharacter(self, name: str, data: tuple[str, str], dotFileName="adds"):
-        self.create(name, data, self.characterFromYaml, self.characters, self.allCharacters, dotFileName)
+        self.create(name, data, All.characterFromYaml, self.characters, self.allCharacters, dotFileName)
     
     ###
     # Item
     ###
     
-    def itemFromYaml(self, name: str, data: str):
+    @staticmethod
+    def itemFromYaml(name: str, data: str):
+        if not data: raise LoadException(f"There was no tag list for item {name}")
         return Item(name, data.split(" "))
     
     def itemsFromYaml(self, dotsName: str, yaml: dict[str, str]):
@@ -180,14 +193,14 @@ class All:
             if name in self.allItems: raise LoadException(f"Encountered duplicate Item {name} in file {dotsName}")
             
             data = yaml[name]
-            item = self.itemFromYaml(name, data)
+            item = All.itemFromYaml(name, data)
             items[name] = item
             self.allItems[name] = item
         
         self.items[dotsName] = items
     
     def addItem(self, name: str, data: str, dotFileName="adds"):
-        self.create(name, data, self.itemFromYaml, self.items, self.allItems, dotFileName)
+        self.create(name, data, All.itemFromYaml, self.items, self.allItems, dotFileName)
     
     ###
     # Map
@@ -196,16 +209,16 @@ class All:
     def mapFromYaml(self, dotsName: str, yaml: dict[str, dict[str, Union[str, dict[str, Union[str, int]]]]]):
         map = Map()
         zones = yaml.get("zones")
-        if not zones: raise LoadException(f"Couldn't find \"zones\" value in Map")
+        if not zones: raise LoadException(f"Couldn't find `zones` value in Map")
         
         for locName in zones:
             map.addZone(locName)
         for locName in zones:
             data = zones[locName]
-            if not data: raise LoadException(f"Couldn't find connections for zone \"{locName}\" in Map")
+            if not data: raise LoadException(f"Couldn't find connections for zone `{locName}` in Map")
             connections = data.split(", ")
             for connection in connections:
-                if not map.getZone(connection): LoadException(f"Found invalid connection \"{connection}\" in \"{locName}\" in Map")
+                if not map.getZone(connection): LoadException(f"Found invalid connection `{connection}` in `{locName}` in Map")
             map.connectZone(locName, connections)
         
         troves = yaml.get("troves")
@@ -218,12 +231,12 @@ class All:
             if pool and not count: raise LoadException(f"Trove had `pool` value but no `count` value, `count` must be at least 1")
             if (not pool) and count: raise LoadException(f"Trove had `count` value but no `pool` value, `pool` must exist to randomly choose Items")
             has = data.get("has", [])
-            if not (pool or has): raise LoadException(f"Trove requires either \"pool\" or \"has\" values, neither were found in Trove \"{troveName}\"")
+            if not (pool or has): raise LoadException(f"Trove requires either `pool` or `has` values, neither were found in Trove `{troveName}`")
             if pool:
                 pool = commas.split(pool)
                 pool = [spaces.split(tags) for tags in pool]
                 for tags in pool:
-                    if tags[0] == "": raise LoadException(f"Got an empty \"pool\" tag list entry")
+                    if tags[0] == "": raise LoadException(f"Got an empty `pool` tag list entry")
             if has:
                 has = commas.split(has)
             trove = Trove(troveName, count, pool, has)
@@ -235,63 +248,92 @@ class All:
     # Event
     ###
     
-    def eventFromYaml(self, name: str, data: Union[str, dict[str, Union[str, dict[str, str]]]], defaultReq: list[list[str]]=[]):
-        if name == "DEFAULT":
-            if not type(data) == str:
-                raise LoadException(f"Encountered DEFAULT entry by the value ({data}) was not a string")
-            return [spaces.split(allArgs) for allArgs in commas.split(data)]
-        chance = data.get("chance")
-        if not chance: raise LoadException(f"\"chance\" value in event {name} not found")
+    @staticmethod
+    def eventFromYaml(name: str, data: dict[str, Union[str, dict[str, str]]], processed: dict[str, dict[str, Union[str, dict[str, str]]]]=None, defaultReq: list[list[str]]=None):
+        if not processed: processed = {}
+        if not defaultReq: defaultReq = []
         
-        text = data.get("text")
-        if not text: raise LoadException(f"\"text\" value in event {name} not found")
+        using: str = data.get("using")
+        
+        e: object = lambda: 0
+        
+        # use
+        if using:
+            if not using in processed:
+                raise LoadException(f"`use` value found, but an invalid value was found: `{using}`")
+        
+        # chance
+        chance = data.get("chance")
+        if using and not chance: chance = processed[using].get("chance")
+        if not chance: raise LoadException(f"`chance` value in event {name} not found")
+        if not isinstance(chance, str): raise LoadException(f"`chance` value in event {name} was not a string (got: {chance})")
+        
+        # text
+        text = data.get("text", "")
+        if using and not text: text = processed[using].get("text", "")
+        if not text: raise LoadException(f"`text` value in event {name} not found")
+        if not isinstance(text, str): raise LoadException(f"`text` value in event {name} was not a string (got: {text})")
         text = text.strip()
         
-        checks = data.get("req")
-        if not checks: checks = {}
-        if type(checks) == str: raise LoadException(f"\"req\" value in event {name} was a string (\"{checks}\"), needs to be a dict")
+        # req
+        req = data.get("req", {})
+        if using and not req: req = processed[using].get("req", {})
+        if not isinstance(req, dict): raise LoadException(f"`req` value in event {name} was not a dict (got: {req})")
         
-        for charShort in checks:
-            argsStr = checks[charShort]
+        checks = {}
+        for charShort in req:
+            argsStr = req[charShort]
             if argsStr:
-                if not type(argsStr) == str: raise LoadException(f"\"req\" value in event {name} has an argument string ({argsStr}) of the incorrect type")
+                if not isinstance(argsStr, str): raise LoadException(f"`req` value in event {name} has an argument string ({argsStr}) of the incorrect type")
                 checks[charShort] = [*defaultReq, *[spaces.split(allArgs) for allArgs in commas.split(argsStr)]]
             else:
                 checks[charShort] = defaultReq
         
-        effects = data.get("res")
-        if not effects: effects = {}
-        if type(effects) == str: raise LoadException(f"\"res\" value in event {name} was a string (\"{effects}\"), needs to be a dict")
+        # res
+        res = data.get("res", {})
+        if using and not res: res = processed[using].get("res", {})
+        if not isinstance(res, dict): raise LoadException(f"`res` value in event {name} was not a dict")
         
-        for charShort in effects:
-            argsStr = effects[charShort]
+        effects = {}
+        for charShort in res:
+            argsStr = res[charShort]
             if argsStr:
-                if not type(argsStr) == str: raise LoadException(f"\"res\" value in event {name} has an argument string ({argsStr}) of the incorrect type")
+                if not isinstance(argsStr, str): raise LoadException(f"`res` value in event {name} has an argument string ({argsStr}) of the incorrect type")
                 effects[charShort] = [spaces.split(allArgs) for allArgs in commas.split(argsStr)]
             else:
                 effects[charShort] = []
         
-        sub = data.get("sub")
-        if not sub: sub = {}
+        # sub
+        sub = data.get("sub", {})
+        if using and not sub: sub = processed[using].get("sub", {})
+        if not isinstance(sub, dict): raise LoadException(f"`sub` value in event {name} was not a dict")
+        
         subEvents = []
         for subName in sub:
             subData = sub[subName]
-            subEvents.append(self.eventFromYaml(subName, subData))
+            subEvents.append(All.eventFromYaml(f"{name}.{subName}", subData, processed, defaultReq))
         
+        #print(f"Loading event {name}:\n  chance: {chance}\n  text: {text}\n  checks: {checks}\n  effects: {effects}")
         return Event(name, chance, text, checks, effects, subEvents)
     
-    def eventsFromYaml(self, dotsName: str, yaml: dict[str, dict[str, dict[str, str]]]):
+    def eventsFromYaml(self, dotsName: str, yaml: dict[str, Union[str, dict[str, Union[str, dict[str, str]]]]]):
         events: dict[str, Event] = {}
+        processed: dict[str, Union[str, dict[str, Union[str, dict[str, str]]]]] = {}
         
         defaultReq: list[list[str]] = []
         for name in yaml:
-            if name in self.events: raise LoadException(f"Encountered duplicate event {name} in file {dotsName}")
+            if name in self.allEvents: raise LoadException(f"Encountered duplicate event {name} in file {dotsName}")
             
             data = yaml[name]
-            event = self.eventFromYaml(name, data, defaultReq)
-            if type(event) != Event:
-                defaultReq = event
+        
+            if name.startswith("_DEFAULT"):
+                if not type(data) == str:
+                    raise LoadException(f"Encountered `_DEFAULT` entry but the value was not a string (got: {data})")
+                defaultReq = [spaces.split(allArgs) for allArgs in commas.split(data)]
                 continue
+                
+            event = All.eventFromYaml(name, data, processed, defaultReq)
+            processed[name] = data
             events[name] = event
             self.allEvents[name] = event
             

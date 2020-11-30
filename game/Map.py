@@ -9,6 +9,9 @@ class Zone:
         self.name = name
         self.connections: list[Zone] = []
     
+    def __str__(self):
+        return f"Zone \"{self.name}\""
+    
     def connect(self, zone: Zone):
         if zone in self.connections: return
         self.connections.append(zone)
@@ -28,8 +31,10 @@ class Map:
         self.startingZone: Zone = None
     
     def addZone(self, name: str):
-        if not self.startingZone: self.startingZone = Zone(name)
-        self.zones[name] = self.startingZone
+        zone = Zone(name)
+        if not self.startingZone:
+            self.startingZone = zone
+        self.zones[name] = zone
     
     def addTrove(self, trove: Trove):
         self.troves[trove.getName()] = trove

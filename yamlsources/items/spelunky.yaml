@@ -1,1 +1,27 @@
 
+mattock: weapon melee smashing
+boomerang: weapon ranged
+bow: weapon ranged
+spike shoes: weapon melee
+rock: weapon melee
+
+shield: protect
+
+bomb: utility weapon
+rope: utility
+teleporter: utility
+cape: utility
+spectacles: utility
+compass: utility
+climbing gloves: utility
+
+gold: currency
+ruby: currency
+emerald: currency
+diamond: currency
+
+royal jelly: SECRET food
+
+udjat eye: SECRET
+hedjet: SECRET
+ankh: SECRET

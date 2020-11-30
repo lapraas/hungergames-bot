@@ -24,6 +24,7 @@ class Trove:
         return self.name
     
     def reset(self):
+        """ Resets the Trove's generated items. """
         self.pool = []
         self.gen = []
     

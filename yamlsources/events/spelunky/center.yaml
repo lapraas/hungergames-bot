@@ -1,8 +1,8 @@
 
-DEFAULT: round= 1
+_DEFAULT first round, center: round= 1, in Center
 
 cornucopia start:
-  chance: mythic
+  chance: uncommon
   req:
     main:
   text: |
@@ -16,7 +16,7 @@ cornucopia start:
       text: |
         They@main find@main a&loot, snatch@main it, and run@main.
       res:
-        main: give loot, tag running
+        main: give loot, tag running 2
     
     fail:
       chance: DEFAULT
@@ -37,4 +37,81 @@ cornucopia start:
           text: |
             @main runs away from the Cornucopia's chaos before anything can happen to them@main.
           res:
-            main: tag running
+            main: tag running 2
+
+run start:
+  chance: rarer
+  req:
+    main:
+  text: |
+    @main wants nothing to do with the cornucopia, running immediately.
+  
+  sub:
+    tidepools:
+      chance: common
+      text: |
+        They@main head@main towards the Tidepools.
+      res:
+        main: move Tidepools
+    jungle:
+      chance: common
+      text: |
+        They@main head@main towards the Jungle.
+      res:
+        main: move Jungle
+    caves:
+      chance: common
+      text: |
+        They@main head@main towards the Caves.
+      res:
+        main: move Caves
+
+hide start:
+  chance: mythic
+  req:
+    main:
+  text: |
+    @main holds off on the cornucopia, finding a place to hide instead.
+  res:
+    main: tag hiding 1
+
+_DEFAULT center: in Center
+
+back to cornucopia:
+  chance: common
+  req:
+    main: tag hiding, limittotal 1
+  text: |
+    Once they've@main let everything calm down, @main sneaks up to the cornucopia.
+  
+  sub:
+    loot:
+      chance: common
+      req:
+        main: takefrom Cornucopia loot
+      text: |
+        They@main find a&loot and quietly take@main it, running away after.
+      res:
+        main: give loot, untag hiding
+    
+    noloot:
+      chance: DEFAULT
+      text: |
+        Everything has already been looted. Dismayed, they@main run@main away from the cornucopia.
+
+leave center default:
+  chance: shiny
+  req:
+    main:
+  text: |
+    @main decides to leave the Center, running off to the place they@main think@main looks the coolest.
+  res:
+    main: move
+
+leave center run:
+  using: run start
+  chance: common
+  req:
+    main: tag running
+  text: |
+    @main runs away from the Center.

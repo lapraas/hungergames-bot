@@ -5,7 +5,9 @@ from game.All import All
 
 ALL = All("./yamlsources")
 
-GAME = ALL.loadGameWithSettings(["ALL"], ["ALL"], "simple", ["ALL"])
+GAME = ALL.loadGameWithSettings(characters=[""], items=["spelunky"], map="simplespelunky", events=["spelunky"])
+GAME.start()
+GAME.round()
 
 tributes = []
 
@@ -46,6 +48,14 @@ def doCommand(op, *args):
         tribute = GAME.getTributeByName(args[0])
         print(tribute.location.name)
     
+    elif op == "tagsof":
+        if not len(args) == 1:
+            print("requires 1 arg")
+            return False
+        tribute = GAME.getTributeByName(args[0])
+        for tag in tribute.tags:
+            print(tag)
+    
     elif op == "give":
         if not len(args) == 2:
             print("requires 2 or more args")
@@ -54,18 +64,12 @@ def doCommand(op, *args):
         tribute = GAME.getTributeByName(charName)
         item = GAME.getItemByName(itemName)
         tribute.copyAndGiveItem(item)
-    
-    elif op == "oldround":
-        results = GAME.round()
-        for char in results:
-            result = results[char]
-            for text in result.getTexts():
-                print(text)
-            print(result.getEffects())
-            print()
+        
+    elif op == "start":
+        GAME.start()
     
     elif op == "round":
-        GAME.roundStart()
+        GAME.round()
     
     elif op == "next":
         result = GAME.next()

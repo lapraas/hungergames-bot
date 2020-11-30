@@ -1,14 +1,13 @@
 
 from __future__ import annotations
 from abc import abstractmethod
-from game.Item import Item
-from game.Map import Map
 
-from typing import Type, Union
+from typing import Type
 
-from .Character import Character
-from .State import State
-from .Valids import EventPart, Suite, Valids
+from game.Character import Character
+from game.State import State
+from game.Valids import EventPart, Suite, Valids
+
 class Effect(EventPart):
     @abstractmethod
     def perform(self, char: Character, state: State) -> str:
@@ -17,14 +16,19 @@ class Effect(EventPart):
         pass
 
 class TagEffect(Effect):
-    args = ["type", "tag name"]
+    args = ["type", "tag name", "tag duration?"]
     matches = ["tag"]
         
     def __init__(self, valids: Valids, *args: str):
-        _, self.tag = args
+        _, self.tag = args[:2]
+        self.tagAge = "0"
+        if len(args) == 3: self.tagAge = args[2]
+        
+        valids.validateIsNumber(self.tagAge)
+        self.tagAge = int(self.tagAge)
     
     def perform(self, char: Character, state: State):
-        char.addTag(self.tag)
+        char.addTag(self.tag, self.tagAge)
         return f"added tag: {self.tag}"
 
 class UntagEffect(Effect):
@@ -159,11 +163,14 @@ class EffectSuite(Suite):
         self.effects: list[Effect] = []
     
     def load(self, valids: Valids):
+        self.effects = []
         super().load(valids, ALLEFFECTCLASSES, self.effects)
     
     def performAll(self, char: Character, state: State):
         allEffectTexts: list[str] = []
-        for ep in self.effects:
-            res = ep.perform(char, state)
+        print(f"loaded effects: {self.effects}")
+        for effect in self.effects:
+            print(f"performing effect {effect}")
+            res = effect.perform(char, state)
             allEffectTexts.append(res)
         return allEffectTexts

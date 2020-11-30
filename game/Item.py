@@ -9,7 +9,7 @@ class Item:
         self.tags = tags
     
     def __repr__(self):
-        return f"Item {self.name}"
+        return f"Item \"{self.name}\""
     
     def __str__(self):
         return self.string()

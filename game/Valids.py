@@ -65,7 +65,7 @@ class Valids:
     
     def validateIsNumber(self, arg):
         for let in arg:
-            if let not in "1234567890":
+            if let not in "1234567890-":
                 raise ValidationException(f"Encountered an invalid argument, expceted number: \"{arg}\"")
     
     def validateText(self, text):

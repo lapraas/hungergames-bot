@@ -98,21 +98,34 @@ class RelationCheck(Check):
         return False
 
 class TagCheck(Check):
-    args = ["type", "tag name"]
-    matches = ["tag"]
+    NONE = "tag"
+    EQ = "tag="
+    LT = "tag<"
+    GT = "tag>"
+    
+    args = ["tag check type", "tag name", "tag time?"]
+    matches = [NONE, EQ, LT, GT]
     
     def __init__(self, valids: Valids, *args: str):
-        _, tag = args
+        self.tType, self.tag = args[:2]
+        self.age = "-1" if not len(args) > 3 else args[2]
         
-        self.tag = tag
+        valids.validateIsNumber(self.age)
+        self.age = int(self.age)
         valids.addCharTag(self.tag)
     
     def check(self, char: Character, state: State):
+        if self.tType in [TagCheck.NONE, TagCheck.GT]:
+            return char.hasTagOverAge(self.tag, self.age)
+        if self.tType == TagCheck.EQ:
+            return char.hasTagAtAge(self.tag, self.age)
+        if self.tType == TagCheck.LT:
+            return char.hasTagUnderAge(self.tag, self.age)
         return char.hasTag(self.tag)
 
 class ItemCheck(Check):
     BY_TAGS = "item"
-    BY_NAME = "itemeq"
+    BY_NAME = "item="
     
     args = ["type", "item shorthand", "*item tags"]
     matches = [BY_TAGS, BY_NAME]
@@ -139,7 +152,7 @@ class ItemCheck(Check):
 
 class CreateCheck(Check):
     BY_TAGS = "create"
-    BY_NAME = "createeq"
+    BY_NAME = "create="
     
     args = ["type", "item shorthand", "*item tags"]
     matches = [BY_TAGS, BY_NAME]
@@ -212,12 +225,13 @@ class TroveCheck(Check):
         return True
 
 class RoundCheck(Check):
-    ON = "round="
+    EQUAL = "round="
+    NOTEQUAL = "round!="
     BEFORE = "round<"
     AFTER = "round>"
     
     args = ["round comparison", "number"]
-    matches = [ON, BEFORE, AFTER]
+    matches = [EQUAL, NOTEQUAL, BEFORE, AFTER]
     
     def __init__(self, valids: Valids, *args: str):
         self.rType, self.number = args
@@ -225,8 +239,10 @@ class RoundCheck(Check):
         self.number = int(self.number)
     
     def check(self, char: Character, state: State) -> bool:
-        if self.rType == RoundCheck.ON:
+        if self.rType == RoundCheck.EQUAL:
             return self.number == char.getAge()
+        if self.rType == RoundCheck.NOTEQUAL:
+            return self.number != char.getAge()
         if self.rType == RoundCheck.BEFORE:
             return char.getAge() < self.number
         if self.rType == RoundCheck.AFTER:
@@ -253,20 +269,21 @@ class CheckSuite(Suite):
         self.checks: list[Check] = []
     
     def load(self, valids: Valids, isSub: bool=False):
+        self.checks = []
         valids.addCharShort(self.getCharShort())
         super().load(valids, ALLCHECKCLASSES, self.checks)
         if not isSub:
             if (not any([type(check) == AliveCheck for check in self.checks])):
                 self.checks.insert(0, AliveCheck(valids, AliveCheck.ALIVE))
             if (not any([type(check) == RoundCheck for check in self.checks])):
-                self.checks.insert(0, RoundCheck(valids, RoundCheck.AFTER, "1"))
+                self.checks.insert(0, RoundCheck(valids, RoundCheck.NOTEQUAL, "1"))
     
     def addNearbyCheckIfNeeded(self, valids: Valids):
         if (not any([type(check) == AliveCheck for check in self.checks])):
             self.checks.insert(0, DistanceCheck(valids, DistanceCheck.NEARBY))
     
     def checkAll(self, char: Character, state: State):
-        for ep in self.checks:
-            res = ep.check(char, state)
+        for check in self.checks:
+            res = check.check(char, state)
             if not res: return False
         return True

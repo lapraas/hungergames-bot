@@ -3,10 +3,28 @@ from __future__ import annotations
 import inflect
 p = inflect.engine()
 import re
+from typing import Callable, Optional
 
-from typing import Optional
-from .Item import Item
-from .Map import Zone
+from game.Item import Item
+from game.Map import Zone
+
+class Tag:
+    def __init__(self, name: str, lasts: int, forever: bool=False):
+        self.name = name
+        self.age = lasts
+        self.forever = False
+    
+    def __str__(self):
+        return f"Tag {self.name} ({self.age})"
+    
+    def changeAge(self):
+        if self.forever:
+            self.age += 1
+        else:
+            self.age -= 1
+    
+    def isExpired(self):
+        return self.age < 0
 
 def _match_url(url):
     regex = re.compile(
@@ -22,19 +40,20 @@ class Character:
         self.name = name
         self.imgSrc = imgSrc if _match_url(imgSrc) else None
         if not self.imgSrc:
-            print(f"got bad image url for character {self.string()}")
+            #print(f"got bad image url for character {self.string()}")
+            pass
         self.subj, self.obj, self.plur1, self.plur2, self.flex, self.plural = pronouns
         
         self.items: list[Item] = []
-        self.tags: list[str] = []
+        self.tags: list[Tag] = []
         self.location: Zone = None
         self.alliance: list[Character] = []
         self.alive: bool = True
-        self.age: int = 1
+        self.age: int = 0
         self.roundsSurvived: int = 0
     
     def __repr__(self):
-        return f"Character {self.name}"
+        return f"Character \"{self.name}\""
     
     def __str__(self):
         return self.string()
@@ -65,7 +84,7 @@ class Character:
         self.location = None
         self.alliance = []
         self.alive = True
-        self.age = 1
+        self.age = 0
         self.roundsSurvived = 0
     
     def getName(self):
@@ -90,6 +109,10 @@ class Character:
                 toRet = self.flex
             elif lcTag == "they're":
                 toRet = self.subj + ("'re" if self.plural else "'s")
+            elif lcTag == "they've":
+                toRet = self.subj + ("'ve" if self.plural else "'s")
+            elif lcTag == "they'll":
+                toRet = self.subj + "'ll"
             elif lcTag == "weren't":
                 toRet = lcTag if self.plural else "wasn't"
             elif lcTag == "aren't":
@@ -103,15 +126,43 @@ class Character:
                 return toRet.capitalize()
         return toRet
     
-    def addTag(self, tag: str):
+    def addTag(self, tag: str, lasts: int=0):
         if self.hasTag(tag): return
-        self.tags.append(tag)
+        if lasts:
+            self.tags.append(Tag(tag, lasts))
+        else:
+            self.tags.append(Tag(tag, 0, True))
     
-    def removeTag(self, tag: str):
+    def removeTag(self, tagName: str):
+        tag = self.getTag(tagName)
         self.tags.remove(tag)
     
-    def hasTag(self, tag: str):
-        return tag in self.tags
+    def getTag(self, tagName: str):
+        for tag in self.tags:
+            if tag.name == tagName:
+                return tag
+        return None
+    
+    def hasTag(self, tagName: str):
+        if tagName.startswith("!"):
+            return not bool(self.getTag(tagName[1:]))
+        return bool(self.getTag(tagName))
+    
+    def compareTagAge(self, tagName: str, age: int, comp: Callable[[int, int], bool]):
+        flip = tagName.startswith("!")
+        if flip: tagName = tagName[1:]
+        tag = self.getTag(tagName)
+        if not tag: return False
+        return (not comp(tag.age, age)) if flip else (comp(tag.age, age))
+    
+    def hasTagOverAge(self, tagName: str, age: int):
+        return self.compareTagAge(tagName, age, lambda t, a: t > a)
+    
+    def hasTagAtAge(self, tagName: str, age: int):
+        return self.compareTagAge(tagName, age, lambda t, a: t == a)
+    
+    def hasTagUnderAge(self, tagName: str, age: int):
+        return self.compareTagAge(tagName, age, lambda t, a: t < a)
     
     def isAlive(self):
         return self.alive
@@ -126,6 +177,14 @@ class Character:
         self.age += 1
         if self.isAlive():
             self.roundsSurvived += 1
+        
+        toRemove: list[Tag] = []
+        for tag in self.tags:
+            tag.changeAge()
+            if tag.isExpired():
+                toRemove.append(tag)
+        for tag in toRemove:
+            self.tags.remove(tag)
     
     def getAge(self):
         """ Get the total number of rounds this Character has existed. """
@@ -163,7 +222,7 @@ class Character:
     def isNearby(self, other: Character):
         return self.getLocation() == other.getLocation()
     
-    def move(self, newLocation: str):
+    def move(self, newLocation: Zone):
         self.location = newLocation
     
     def moveRandom(self):
@@ -197,7 +256,7 @@ class Character:
     
     def getTagsStr(self):
         if not self.tags: return "No tags"
-        return ", ".join(self.tags)
+        return ", ".join([tag.name for tag in self.tags])
     
     def getAllianceStr(self):
         if not self.alliance: return "No alliance"

@@ -1,0 +1,7 @@
+
+idle:
+  chance: DEFAULT
+  req:
+    main:
+  text: |
+    @main idles pleasantly.

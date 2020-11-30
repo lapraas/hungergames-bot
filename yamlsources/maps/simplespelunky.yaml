@@ -11,7 +11,4 @@ zones:
 troves:
   Cornucopia:
     count: 12
-    pool: ANY
-  
-  Hidden Caves:
-    has: gem, gem, gem
+    pool: weapon, utility
