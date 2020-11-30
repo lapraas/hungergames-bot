@@ -5,10 +5,10 @@ from random import choice
 
 from typing import Type, Union
 
-from .Character import Character
-from .Item import Item
-from .State import State
-from .Valids import EventPart, Suite, Valids
+from game.Character import Character
+from game.Item import Item
+from game.State import State
+from game.Valids import EventPart, Suite, Valids
 
 class Check(EventPart):
     @abstractmethod
@@ -110,18 +110,21 @@ class TagCheck(Check):
         self.tType, self.tag = args[:2]
         self.age = "-1" if not len(args) > 3 else args[2]
         
+        self.flip = self.tag.startswith("!")
+        if self.flip: self.tag = self.tag[1:]
+        
         valids.validateIsNumber(self.age)
         self.age = int(self.age)
         valids.addCharTag(self.tag)
     
     def check(self, char: Character, state: State):
         if self.tType in [TagCheck.NONE, TagCheck.GT]:
-            return char.hasTagOverAge(self.tag, self.age)
+            toRet = char.getTagAge(self.tag) > self.age
         if self.tType == TagCheck.EQ:
-            return char.hasTagAtAge(self.tag, self.age)
-        if self.tType == TagCheck.LT:
-            return char.hasTagUnderAge(self.tag, self.age)
-        return char.hasTag(self.tag)
+            toRet = char.getTagAge(self.tag) == self.age
+        else:
+            toRet = char.getTagAge(self.tag) < self.age
+        return toRet if not self.flip else not toRet
 
 class ItemCheck(Check):
     BY_TAGS = "item"
@@ -141,7 +144,6 @@ class ItemCheck(Check):
                 valids.validateLoadedItemTag(tag)
     
     def check(self, char: Character, state: State) -> bool:
-        item: Item = None
         if self.rType == ItemCheck.BY_TAGS:
             item = char.getItemByTags(self.itemTags)
         else:

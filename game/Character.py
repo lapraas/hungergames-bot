@@ -63,11 +63,12 @@ class Character:
             "aren't": "aren't" if self.plural else "isn't"
         }
         
+        self.alive: bool = True
         self.items: list[Item] = []
         self.tags: list[Tag] = []
-        self.location: Zone = None
         self.alliance: list[Character] = []
-        self.alive: bool = True
+        self.status: Optional[Tag] = None
+        self.location: Zone = None
         self.age: int = 0
         self.roundsSurvived: int = 0
     
@@ -93,7 +94,6 @@ class Character:
             self.items == o.items,
             self.tags == o.tags,
             self.location == o.location,
-            # again including alliance would create an infinite recursion
             self.alive == o.alive
         ])
     
@@ -104,11 +104,12 @@ class Character:
     ###
     
     def reset(self):
+        self.alive = True
         self.items = []
         self.tags = []
-        self.location = None
         self.alliance = []
-        self.alive = True
+        self.location = None
+        self.status = None
         self.age = 0
         self.roundsSurvived = 0
     
@@ -131,10 +132,13 @@ class Character:
     #
     ###
     
-    # Misc
+    # Status
     
-    def getPicture(self):
-        return self.imgSrc
+    def getStatusAge(self):
+        return self.status.age
+    
+    def hasStatus(self, name):
+        return self.status.name == name
     
     # Alive
     
@@ -207,21 +211,10 @@ class Character:
             return not bool(self.getTag(tagName[1:]))
         return bool(self.getTag(tagName))
     
-    def compareTagAge(self, tagName: str, age: int, comp: Callable[[int, int], bool]):
-        flip = tagName.startswith("!")
-        if flip: tagName = tagName[1:]
+    def getTagAge(self, tagName: str) -> Optional[int]:
         tag = self.getTag(tagName)
-        if not tag: return False
-        return (not comp(tag.age, age)) if flip else (comp(tag.age, age))
-    
-    def hasTagOverAge(self, tagName: str, age: int):
-        return self.compareTagAge(tagName, age, lambda t, a: t > a)
-    
-    def hasTagAtAge(self, tagName: str, age: int):
-        return self.compareTagAge(tagName, age, lambda t, a: t == a)
-    
-    def hasTagUnderAge(self, tagName: str, age: int):
-        return self.compareTagAge(tagName, age, lambda t, a: t < a)
+        if not tag: return None
+        return tag.age
     
     # Relations
     
@@ -234,7 +227,10 @@ class Character:
     def isAllyOf(self, other: Character):
         return other in self.alliance
     
-    # Display stats
+    # Display
+    
+    def getPicture(self):
+        return self.imgSrc
     
     def getLocationStr(self):
         if not self.location: return "No location"
@@ -253,7 +249,7 @@ class Character:
         return ", ".join([ally.string() for ally in self.alliance])
     
     def getAliveStr(self):
-        return "Alive" if self.alive else "Dead"
+        return "Alive" if self.isAlive() else "Dead"
     
     ###
     #
