@@ -5,7 +5,7 @@ from game.All import All
 
 ALL = All("./yamlsources")
 
-GAME = ALL.loadGameWithSettings(characters=[""], items=["spelunky"], map="simplespelunky", events=["spelunky"])
+GAME = ALL.loadGameWithSettings(characters=[""], items=["spelunky", "simple"], map="onezone", events=["simple"])
 GAME.start()
 GAME.round()
 

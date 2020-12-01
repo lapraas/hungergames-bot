@@ -112,10 +112,18 @@ class RoundCheck(ComparisonCheck):
         return char.getAge()
 
 class StatusCheck(ComparisonCheck):
+    args = ["any", "comparison?", "number?"]
     matches = ["status"]
+    
+    def __init__(self, valids: Valids, *args: str):
+        _, self.status, self.comp, self.number = args
     
     def getVal(self, char: Character) -> int:
         return char.getStatusAge()
+    
+    def check(self, char: Character, state: State) -> bool:
+        if not char.hasStatus(self.status): return False
+        super().check(char, state)
 
 class TagCheck(ComparisonCheck):
     args = ["new char tag", "comparison?", "number?"]
@@ -170,11 +178,11 @@ class CreateCheck(Check):
         _, self.itemShort, *itemTags = args
         self.itemTags = itemTags
         
-        items: list[Item] = valids.getLoadedItemsWithTags(self.itemTags)
-        self.item = choice(items)
+        self.items: list[Item] = valids.getLoadedItemsWithTags(self.itemTags)
     
     def check(self, char: Character, state: State) -> bool:
-        state.setItem(self.itemShort, self.item)
+        item = choice(self.items)
+        state.setItem(self.itemShort, item)
         return True
 
 class CreateNamedCheck(CreateCheck):
@@ -183,7 +191,7 @@ class CreateNamedCheck(CreateCheck):
     
     def __init__(self, valids: Valids, *args: str):
         _, self.itemShort, self.itemName = args
-        self.item = valids.getLoadedItemWithName(self.itemName)
+        self.items = [valids.getLoadedItemWithName(self.itemName)]
 
 class LocationCheck(Check):
     args = ["zone name"]
@@ -247,12 +255,15 @@ class CheckSuite(Suite):
         super().__init__(charShort, argsLists)
         
         self.checks: list[Check] = []
+        self.isSubEvent: bool = False
     
-    def load(self, valids: Valids, isSub: bool=False):
+    def load(self, valids: Valids, isSubEvent: bool=False):
         self.checks = []
         valids.addCharShort(self.getCharShort())
         super().load(valids, ALLCHECKCLASSES, self.checks)
-        if not isSub:
+        
+        self.isSubEvent = isSubEvent
+        if not self.isSubEvent:
             if (not any([type(check) == AliveCheck for check in self.checks])):
                 self.checks.insert(0, AliveCheck(valids, AliveCheck.ALIVE))
             if (not any([type(check) == RoundCheck for check in self.checks])):
@@ -263,7 +274,7 @@ class CheckSuite(Suite):
             self.checks.insert(0, DistanceCheck(valids, DistanceCheck.NEARBY))
     
     def checkAll(self, char: Character, state: State):
-        if char.status:
+        if char.status and not self.isSubEvent:
             checked = False
             for check in self.checks:
                 if type(check) == StatusCheck:

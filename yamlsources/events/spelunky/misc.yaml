@@ -1,0 +1,16 @@
+
+idle:
+  chance: DEFAULT
+  req:
+    main: round > 0
+  text: |
+    @main idles for a while before becoming angry. Why isn't \@lapras#0594 letting them@main do anything?
+
+sponsor:
+  chance: mythic
+  req:
+    main: create present ANY
+  text: |
+    @main recieves a package from an unknown sponsor. They open it to find a&present.
+  res:
+    main: give present

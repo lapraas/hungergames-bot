@@ -20,10 +20,10 @@ RARITIES = {
 }
 
 class Event:
-    def __init__(self, name: str, chance: int, text: str, checkNamesToArgLists: dict[str, list[list[str]]], effectNamesToArgLists: dict[str, list[list[str]]], sub: list[Event]):
+    def __init__(self, name: str, chance: int, text: list[str], checkNamesToArgLists: dict[str, list[list[str]]], effectNamesToArgLists: dict[str, list[list[str]]], sub: list[Event]):
         self.name = name
         self.chance = chance
-        self.text = text
+        self.texts = text
         self.checkSuites = [CheckSuite(checkName, checkNamesToArgLists[checkName]) for checkName in checkNamesToArgLists]
         self.effectSuites = [EffectSuite(effectName, effectNamesToArgLists[effectName]) for effectName in effectNamesToArgLists]
         self.sub = sub
@@ -59,7 +59,8 @@ class Event:
             for subEvent in self.sub:
                 subEvent.load(valids, True)
             
-            valids.validateText(self.text)
+            for text in self.texts:
+                valids.validateText(text)
             
         except ValidationException as e:
             raise Exception(f"Encountered an exception when loading Event \"{self.name}\": {e}")
@@ -144,7 +145,7 @@ class Event:
         mc = self.state.getChar()
         self.incrementTriggers(mc)
         
-        result.addText(self.text, self.state)
+        result.addText(choice(self.texts), self.state)
         # Do each Suite's actions to the State's Characters
         for effectSuite in self.effectSuites:
             char = self.state.getChar(effectSuite.getCharShort())

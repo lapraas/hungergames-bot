@@ -22,6 +22,8 @@ class LoadException(Exception):
 
 commas = re.compile(r"\s*,\s*")
 spaces = re.compile(r"\s+")
+semicolons = re.compile(r"\s*;\s*")
+newlines = re.compile(r"\n+")
 
 class All:
     def __init__(self, rootPath: str, charsDirName: str="characters", itemsDirName: str="items", mapsDirName: str="maps", eventsDirName: str="events"):
@@ -208,20 +210,21 @@ class All:
     def mapFromYaml(self, dotsName: str, yaml: dict[str, dict[str, Union[str, dict[str, Union[str, int]]]]]) -> None:
         map = Map()
         zones = yaml.get("zones")
-        if not zones: raise LoadException(f"Couldn't find `zones` value in Map")
+        if not isinstance(zones, dict): raise LoadException(f"`zones` value in Map was not a dict (got: {zones})")
         
         for locName in zones:
             map.addZone(locName)
         for locName in zones:
             data = zones[locName]
-            if not data: raise LoadException(f"Couldn't find connections for zone `{locName}` in Map")
+            if not data: continue
+            if data and not isinstance(data, str): raise LoadException(f"`{locName}` value in map was not a str (got: {data})")
             connections = data.split(", ")
             for connection in connections:
                 if not map.getZone(connection): LoadException(f"Found invalid connection `{connection}` in `{locName}` in Map")
             map.connectZone(locName, connections)
         
-        troves = yaml.get("troves")
-        if not troves: troves = {}
+        troves = yaml.get("troves", {})
+        if not isinstance(troves, dict): raise LoadException(f"`troves` value in Map was not a dict (got: {troves})")
         
         for troveName in troves:
             data = troves[troveName]
@@ -246,95 +249,118 @@ class All:
     ###
     # Event
     ###
+    @staticmethod
+    def eventFromYamlNew(name: str, data: OrderedDict[str, Union[str, int, OrderedDict]], defaultReq: str=""):
+        chance: str = None
+        text: str = None
+        checks: dict[str, list[list[str]]] = {}
+        effects: dict[str, list[list[str]]] = {}
+        
+        subEvents = []
+        
+        for key in data:
+            val = data[key]
+            if key == "chance":
+                if not isinstance(val, str): raise LoadException(f"`chance` value in event {name} was not a string (got: {chance})")
+                chance = val
+            elif key == "text":
+                if not isinstance(val, str): raise LoadException(f"`text` value in event {name} was not a string (got: {val})")
+                text = [t.strip() for t in newlines.split(val.strip())]
+            elif key.startswith("->"):
+                if not isinstance(val, dict): raise LoadException(f"`->` value in event {name} was not a dict (got: {val})")
+                subEvents.append(All.eventFromYamlNew(name + key, val, defaultReq))
+            else:
+                if not any([isinstance(val, str), isinstance(val, int)]): raise LoadException(f"`{key}` value in event {name} was not a string or int (got: {val})")
+                charShort = str(key)
+                parts = semicolons.split(val)
+                if len(parts) > 2: raise LoadException(f"`{charShort}` value in event {name} had too many semicolons (got: {val})")
+                reqStr = parts[0]
+                resStr = parts[1] if len(parts) == 2 else ""
+                if defaultReq: # one off - only apply default to the main char requirement
+                    defaultReq = None
+                    reqStr = defaultReq + reqStr
+                checks[charShort] = [spaces.split(allArgs) for allArgs in commas.split(reqStr)]
+                effects[charShort] = [spaces.split(allArgs) for allArgs in commas.split(resStr)] if resStr else []
+                
+        if chance == None: raise LoadException(f"`chance` value in event {name} not found")
+        if text == None: raise LoadException(f"`text` value in event {name} not found")
+        
+        return Event(name, chance, text, checks, effects, subEvents)
     
     @staticmethod
-    def eventFromYaml(name: str, data: dict[str, Union[str, dict[str, str]]], processed: dict[str, dict[str, Union[str, dict[str, str]]]]=None, defaultReq: list[list[str]]=None) -> Event:
-        if not processed: processed = {}
-        if not defaultReq: defaultReq = []
-        
-        using: str = data.get("using")
-        
-        e: object = lambda: 0
-        
-        # use
-        if using:
-            if not using in processed:
-                raise LoadException(f"`use` value found, but an invalid value was found: `{using}`")
+    def eventFromYaml(name: str, data: dict[str, Union[str, dict[str, str]]], defaultReq: str="", isSub: bool=False) -> Event:
         
         # chance
         chance = data.get("chance")
-        if using and not chance: chance = processed[using].get("chance")
         if not chance: raise LoadException(f"`chance` value in event {name} not found")
         if not isinstance(chance, str): raise LoadException(f"`chance` value in event {name} was not a string (got: {chance})")
         
         # text
         text = data.get("text", "")
-        if using and not text: text = processed[using].get("text", "")
         if not text: raise LoadException(f"`text` value in event {name} not found")
         if not isinstance(text, str): raise LoadException(f"`text` value in event {name} was not a string (got: {text})")
-        text = text.strip()
+        texts = [t.strip() for t in newlines.split(text.strip())]
         
-        # req
-        req = data.get("req", {})
-        if using and not req: req = processed[using].get("req", {})
-        if not isinstance(req, dict): raise LoadException(f"`req` value in event {name} was not a dict (got: {req})")
+        # req and res
+        def makeEventParts(defaultReq, partType: str, foundMain=False):
+            raw = data.get(partType, {})
+            if not isinstance(raw, dict): raise LoadException(f"`{partType}` value in event {name} was not a dict (got: {raw})")
+            parts = {}
+            for charShort in raw:
+                argsStr = raw[charShort]
+                if not argsStr: argsStr = ""
+                if not isinstance(argsStr, str): raise LoadException(f"`{partType}` value in event {name} has an argument string ({argsStr}) of the incorrect type")
+                if not foundMain:
+                    foundMain = True
+                    if argsStr and defaultReq:
+                        argsStr = ", ".join([defaultReq, argsStr])
+                    elif defaultReq:
+                        argsStr = defaultReq
+                parts[charShort] = [spaces.split(allArgs) for allArgs in commas.split(argsStr)]
+            return parts
         
-        checks = {}
-        for charShort in req:
-            argsStr = req[charShort]
-            if argsStr:
-                if not isinstance(argsStr, str): raise LoadException(f"`req` value in event {name} has an argument string ({argsStr}) of the incorrect type")
-                checks[charShort] = [*defaultReq, *[spaces.split(allArgs) for allArgs in commas.split(argsStr)]]
-            else:
-                checks[charShort] = defaultReq
+        checks = makeEventParts(defaultReq, "req")
+        if not isSub and not checks:
+            raise LoadException(f"`req` value in event {name} was not found")
         
-        # res
-        res = data.get("res", {})
-        if using and not res: res = processed[using].get("res", {})
-        if not isinstance(res, dict): raise LoadException(f"`res` value in event {name} was not a dict")
-        
-        effects = {}
-        for charShort in res:
-            argsStr = res[charShort]
-            if argsStr:
-                if not isinstance(argsStr, str): raise LoadException(f"`res` value in event {name} has an argument string ({argsStr}) of the incorrect type")
-                effects[charShort] = [spaces.split(allArgs) for allArgs in commas.split(argsStr)]
-            else:
-                effects[charShort] = []
+        effects = makeEventParts(defaultReq, "res", True)
         
         # sub
         sub = data.get("sub", {})
-        if using and not sub: sub = processed[using].get("sub", {})
-        if not isinstance(sub, dict): raise LoadException(f"`sub` value in event {name} was not a dict")
+        if not isinstance(sub, dict): raise LoadException(f"`sub` value in event {name} was not a dict (got: {sub})")
         
         subEvents = []
         for subName in sub:
             subData = sub[subName]
-            subEvents.append(All.eventFromYaml(f"{name}->{subName}", subData, processed, defaultReq))
+            subEvents.append(All.eventFromYaml(f"{name}->{subName}", subData, "", True))
         
         #print(f"Loading event {name}:\n  chance: {chance}\n  text: {text}\n  checks: {checks}\n  effects: {effects}")
-        return Event(name, chance, text, checks, effects, subEvents)
+        return Event(name, chance, texts, checks, effects, subEvents)
     
     def eventsFromYaml(self, dotsName: str, yaml: dict[str, Union[str, dict[str, Union[str, dict[str, str]]]]]) -> None:
         events: dict[str, Event] = {}
-        processed: dict[str, Union[str, dict[str, Union[str, dict[str, str]]]]] = {}
         
-        defaultReq: list[list[str]] = []
+        defaultReq: str = ""
         for name in yaml:
             if name in self.allEvents: raise LoadException(f"Encountered duplicate event {name} in file {dotsName}")
             
             data = yaml[name]
         
             if name.startswith("_DEFAULT"):
-                if not type(data) == str:
+                if not data:
+                    defaultReq = ""
+                elif not type(data) == str:
                     raise LoadException(f"Encountered `_DEFAULT` entry but the value was not a string (got: {data})")
-                defaultReq = [spaces.split(allArgs) for allArgs in commas.split(data)]
+                defaultReq = data
                 continue
-                
-            event = All.eventFromYaml(name, data, processed, defaultReq)
-            processed[name] = data
+            name = dotsName + "." + name
+            
+            try:
+                event = All.eventFromYaml(name, data, defaultReq)
+            except LoadException as e:
+                #print(e)
+                event = All.eventFromYamlNew(name, data, defaultReq)
             events[name] = event
-            self.allEvents[name] = event
             
         self.events[dotsName] = events
 

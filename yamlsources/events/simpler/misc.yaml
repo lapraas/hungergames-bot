@@ -1,0 +1,36 @@
+
+tree:
+  chance: shiny
+  req:
+    main: alone
+  text: |
+    @main falls out of a tree and dies.
+  res:
+    main: kill
+
+demons:
+  chance: shiny
+  req:
+    main: alone
+  text: |
+    @main is approached by an Archen with bloodshot eyes, an ethereal Vulpix, the embodiment of self-hate, a calendar, and Her. @main doesn't have a chance to run.
+  res:
+    main: kill
+
+sponsor:
+  chance: mythic
+  req:
+    main: create present ANY
+  text: |
+    @main recieves a package from an unknown sponsor. They@main open@main it to find a&present!
+  res:
+    main: give present
+
+ally:
+  chance: mythic
+  main: alone; ally enemy
+  enemy: enemy main, alone
+  text: |
+    @main, walking through an open field, spots @enemy, who calls to them. After a shouted conversation, the two decide to team up.
+    
+  

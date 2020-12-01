@@ -49,7 +49,6 @@ class Valids:
         self.charShorts.append(short)
     
     def addItemShort(self, short: str):
-        if short in self.itemShorts: raise ValidationException(f"Encountered a duplicate Item shorthand: \"{short}\"")
         self.itemShorts.append(short)
     
     def addCharTag(self, name: str):
@@ -143,17 +142,17 @@ class Valids:
     
     def validateArgs(self, types: list[str], args: list[str]) -> None:
         i = 0
-        print("Validating")
-        print(f"  types: {types}")
-        print(f"  args:  {args}")
+        #print("Validating")
+        #print(f"  types: {types}")
+        #print(f"  args:  {args}")
         while i < len(types):
             typ = types[i]
-            print(f"    typ: {typ}")
+            #print(f"    typ: {typ}")
             
             if i >= len(args):
                 args.append(None)
             arg = args[i]
-            print(f"    arg: {arg}")
+            #print(f"    arg: {arg}")
             
             if typ == "any": # Matches any
                 i += 1
@@ -180,7 +179,7 @@ class Valids:
             if cast != None: args[i] = cast
             
             i += 1
-        print("Finished\n")
+        #print("Finished\n")
     
     #
     #

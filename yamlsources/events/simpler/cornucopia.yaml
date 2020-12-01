@@ -1,0 +1,43 @@
+
+_DEFAULT first round: round = 1
+
+loot start:
+  chance: rare
+  req:
+    main: loot loot Cornucopia
+  text: |
+    @main makes a break for the Cornucopia, snatches a &loot, and runs away.
+  res:
+    main: give loot, tag running 2
+
+run start:
+  chance: rare
+  req:
+    main:
+  text: |
+    @main doesn't want anything to do with the Cornucopia. They@main run@main far away.
+  res:
+    main: tag running 2
+
+dead start:
+  chance: uncommon
+  req:
+    main:
+    enemy: enemy main, item weap weapon
+  text: |
+    @main runs up to the Cornucopia, but meets @enemy's found &weap.
+  res:
+    main: kill
+
+hide start:
+  chance: rare
+  req:
+    main:
+  text: |
+    @main decides to wait until the chaos has cleared from the Cornucopia.
+  res:
+    main: tag hiding 1
+
+_DEFAULT: 
+
+

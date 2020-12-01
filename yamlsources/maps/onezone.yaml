@@ -1,0 +1,8 @@
+
+zones:
+  The Dome:
+
+troves:
+  Cornucopia:
+    count: 12
+    pool: weapon, utility

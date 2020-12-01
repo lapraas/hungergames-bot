@@ -82,7 +82,7 @@ class Result:
         for match in matches:
             tag, objType, short = match.groups()
             if tag.endswith("\\"):
-                replaceText = tag.replace("\\", "")
+                replaceText = text[match.start(): match.end()].replace("\\", "")
             else:
                 replaceObj = None
                 if objType == "@":

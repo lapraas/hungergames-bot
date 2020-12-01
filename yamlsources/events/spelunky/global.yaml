@@ -1,7 +1,0 @@
-
-idle:
-  chance: DEFAULT
-  req:
-    main: round > 0
-  text: |
-    @main idles for a while before becoming angry. Why isn't \@lapras#0594 letting them@main do anything?
