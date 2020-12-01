@@ -50,7 +50,7 @@ class All:
         res = self.build(self.eventsFromYaml, self.eventsDirName)
         if res: raise LoadException(res)
     
-    def loadGameWithSettings(self, characters: list[str], items: list[str], map: str, events: list[str]):
+    def loadGameWithSettings(self, characters: list[str], items: list[str], map: str, events: list[str]) -> Game:
         loadedCharacters: dict[str, Character] = All.load(characters, self.characters)
         loadedItems: dict[str, Item] = All.load(items, self.items)
         loadedMap: Map = All.loadOne(map, self.maps)
@@ -83,23 +83,23 @@ class All:
             raise LoadException(f"Couldn't find any game object files with the name {file}")
         return toLoad
     
-    def dotPathToReal(self, dirName: str, dotPath: str):
+    def dotPathToReal(self, dirName: str, dotPath: str) -> str:
         path = os.path.join(self.rootPath, dirName, *dotPath.split("."))
         return path + ".yaml"
     
     @staticmethod
-    def getYamlFromFile(filename: str):
+    def getYamlFromFile(filename: str) -> dict:
         with open(filename, "r") as f:
             allYaml = yaml.load(f)
             if not allYaml: allYaml = {}
             return allYaml
     
     @staticmethod
-    def replaceYamlInFile(filename: str, allYaml: str):
+    def replaceYamlInFile(filename: str, allYaml: str) -> None:
         with open(filename, "w") as f:
             yaml.dump(allYaml, f)
             
-    def build(self, buildFun: Callable, dirName: str, baseDotsName: str=""):
+    def build(self, buildFun: Callable, dirName: str, baseDotsName: str="") -> None:
         path = os.path.join(self.rootPath, dirName)
         subdirs: list[str] = []
         files: list[str] = []
@@ -124,7 +124,7 @@ class All:
             fullPath = os.path.join(dirName, subdir)
             self.build(buildFun, fullPath, subdir)
         
-    def create(self, name: str, data: Any, buildFun: Callable[[str, Any], Any], objsPerFile: dict[str, dict[str, Any]], allObjs: dict[str, Any], dotFileName):
+    def create(self, name: str, data: Any, buildFun: Callable[[str, Any], Any], objsPerFile: dict[str, dict[str, Any]], allObjs: dict[str, Any], dotFileName) -> None:
         if not dotFileName in objsPerFile: raise LoadException(f"Couldn't find a file at {dotFileName}")
         if name in allObjs: raise LoadException(f"Tried to create duplicate `{name}`")
         
@@ -143,26 +143,25 @@ class All:
     ###
     
     @staticmethod
-    def characterFromYaml(name: str, data: tuple[str, str]):
+    def characterFromYaml(name: str, data: tuple[str, str]) -> Character:
         if not len(data) >= 2: raise LoadException(f"Couldn't load character {name}, too few elements in list ({data})")
         
         gender = data[0]
         if gender == "male":
-            pronouns = ["he", "him", "his", "his", "himself", False]
+            pronouns = ["he", "him", "his", "his", "himself"]
         elif gender == "female":
-            pronouns = ["she", "her", "her", "hers", "herself", False]
+            pronouns = ["she", "her", "her", "hers", "herself"]
         elif gender == "nonbinary":
-            pronouns = ["they", "them", "their", "theirs", "themself", True]
+            pronouns = ["they", "them", "their", "theirs", "themself"]
         else:
             pronouns = data[0].split(" ")
-            if len(pronouns) != 6:
-                raise LoadException(f"Couldn't load Character {name}, there were not 6 values for the Character's pronouns ({pronouns})")
-            pronouns[5] = True if not pronouns[5] in ["False", "0"] else False
+            if len(pronouns) != 5:
+                raise LoadException(f"Couldn't load Character {name}, there were not 5 values for the Character's pronouns ({pronouns})")
         
         imgSrc = data[1]
         return Character(name, imgSrc, pronouns)
     
-    def charactersFromYaml(self, dotsName: str, yaml: dict[str, list[str]]):
+    def charactersFromYaml(self, dotsName: str, yaml: dict[str, list[str]]) -> None:
         chars: dict[str, Character] = {}
         
         for name in yaml:
@@ -182,11 +181,11 @@ class All:
     ###
     
     @staticmethod
-    def itemFromYaml(name: str, data: str):
+    def itemFromYaml(name: str, data: str) -> Item:
         if not data: raise LoadException(f"There was no tag list for item {name}")
         return Item(name, data.split(" "))
     
-    def itemsFromYaml(self, dotsName: str, yaml: dict[str, str]):
+    def itemsFromYaml(self, dotsName: str, yaml: dict[str, str]) -> None:
         items: dict[str, Item] = {}
         
         for name in yaml:
@@ -206,7 +205,7 @@ class All:
     # Map
     ###
     
-    def mapFromYaml(self, dotsName: str, yaml: dict[str, dict[str, Union[str, dict[str, Union[str, int]]]]]):
+    def mapFromYaml(self, dotsName: str, yaml: dict[str, dict[str, Union[str, dict[str, Union[str, int]]]]]) -> None:
         map = Map()
         zones = yaml.get("zones")
         if not zones: raise LoadException(f"Couldn't find `zones` value in Map")
@@ -249,7 +248,7 @@ class All:
     ###
     
     @staticmethod
-    def eventFromYaml(name: str, data: dict[str, Union[str, dict[str, str]]], processed: dict[str, dict[str, Union[str, dict[str, str]]]]=None, defaultReq: list[list[str]]=None):
+    def eventFromYaml(name: str, data: dict[str, Union[str, dict[str, str]]], processed: dict[str, dict[str, Union[str, dict[str, str]]]]=None, defaultReq: list[list[str]]=None) -> Event:
         if not processed: processed = {}
         if not defaultReq: defaultReq = []
         
@@ -311,12 +310,12 @@ class All:
         subEvents = []
         for subName in sub:
             subData = sub[subName]
-            subEvents.append(All.eventFromYaml(f"{name}.{subName}", subData, processed, defaultReq))
+            subEvents.append(All.eventFromYaml(f"{name}->{subName}", subData, processed, defaultReq))
         
         #print(f"Loading event {name}:\n  chance: {chance}\n  text: {text}\n  checks: {checks}\n  effects: {effects}")
         return Event(name, chance, text, checks, effects, subEvents)
     
-    def eventsFromYaml(self, dotsName: str, yaml: dict[str, Union[str, dict[str, Union[str, dict[str, str]]]]]):
+    def eventsFromYaml(self, dotsName: str, yaml: dict[str, Union[str, dict[str, Union[str, dict[str, str]]]]]) -> None:
         events: dict[str, Event] = {}
         processed: dict[str, Union[str, dict[str, Union[str, dict[str, str]]]]] = {}
         

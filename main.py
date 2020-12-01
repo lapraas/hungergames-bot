@@ -73,8 +73,10 @@ def doCommand(op, *args):
     
     elif op == "next":
         result = GAME.next()
-        if not result:
-            print("Couldn't next")
+        if result == False:
+            print("Game not started")
+        if result == True:
+            print("Round not started")
         else:
             for text in result.getTexts():
                 print(text)

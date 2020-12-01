@@ -86,29 +86,54 @@ class RelationCheck(Check):
             return True
         return False
 
-class TagCheck(Check):
-    NONE = "tag"
-    EQ = "tag="
-    LT = "tag<"
-    GT = "tag>"
-    
-    args = ["new char tag", "number?"]
-    matches = [NONE, EQ, LT, GT]
+class ComparisonCheck(Check):
+    args = ["comparison", "number"]
     
     def __init__(self, valids: Valids, *args: str):
-        self.tType, self.tag, self.age = args
+        _, self.comp, self.number = args
+
+    def getVal(self, char: Character) -> int:
+        pass
+    
+    def check(self, char: Character, state: State) -> bool:
+        if self.comp == "=":
+            return self.number == self.getVal(char)
+        if self.comp == "!":
+            return self.number != self.getVal(char)
+        if self.comp == "<":
+            return self.getVal(char) < self.number
+        if self.comp == ">":
+            return self.getVal(char) > self.number
+
+class RoundCheck(ComparisonCheck):
+    matches = ["round"]
+    
+    def getVal(self, char: Character) -> int:
+        return char.getAge()
+
+class StatusCheck(ComparisonCheck):
+    matches = ["status"]
+    
+    def getVal(self, char: Character) -> int:
+        return char.getStatusAge()
+
+class TagCheck(ComparisonCheck):
+    args = ["new char tag", "comparison?", "number?"]
+    matches = ["tag"]
+    
+    def __init__(self, valids: Valids, *args: str):
+        _, self.tag, self.comp, self.age = args
         
         self.flip = self.tag.startswith("!")
         if self.flip: self.tag = self.tag[1:]
     
-    def check(self, char: Character, state: State):
-        if self.tType in [TagCheck.NONE, TagCheck.GT]:
-            toRet = char.getTagAge(self.tag) > self.age
-        if self.tType == TagCheck.EQ:
-            toRet = char.getTagAge(self.tag) == self.age
-        else:
-            toRet = char.getTagAge(self.tag) < self.age
-        return toRet if not self.flip else not toRet
+    def getVal(self, char: Character) -> int:
+        return char.getTagAge(self.tag)
+    
+    def check(self, char: Character, state: State) -> bool:
+        if not char.hasTag(self.tag): return True if self.flip else False
+        res = super().check(char, state)
+        return (not res) if self.flip else res
 
 class ItemCheck(Check):
     args = ["new item short", "*item tag"]
@@ -200,33 +225,6 @@ class TroveCheck(Check):
         state.setItem(self.newItemShort, self.trove.loot())
         return True
 
-class RoundCheck(Check):
-    args = ["comparison", "number"]
-    matches = ["round"]
-    
-    def __init__(self, valids: Valids, *args: str):
-        _, self.comp, self.number = args
-    
-    def getVal(self, char: Character) -> int:
-        return char.getAge()
-    
-    def check(self, char: Character, state: State) -> bool:
-        if self.comp == "=":
-            return self.number == self.getVal(char)
-        if self.comp == "!":
-            return self.number != self.getVal(char)
-        if self.comp == "<":
-            return self.getVal(char) < self.number
-        if self.comp == ">":
-            return self.getVal(char) > self.number
-
-class StatusCheck(RoundCheck):
-    args = ["comparison", "number"]
-    matches = ["status"]
-    
-    def getVal(self, char: Character) -> int:
-        return char.getStatusAge()
-
 ALLCHECKCLASSES: list[Type[EventPart]] = [
     AliveCheck,
     AloneCheck,
@@ -265,6 +263,13 @@ class CheckSuite(Suite):
             self.checks.insert(0, DistanceCheck(valids, DistanceCheck.NEARBY))
     
     def checkAll(self, char: Character, state: State):
+        if char.status:
+            checked = False
+            for check in self.checks:
+                if type(check) == StatusCheck:
+                    if not check.check(char, state): return False
+                    checked = True
+            if not checked: return False
         for check in self.checks:
             res = check.check(char, state)
             if not res: return False

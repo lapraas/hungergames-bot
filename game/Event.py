@@ -2,11 +2,11 @@
 from __future__ import annotations
 from random import choice
 
-from .Character import Character
-from .Check import CheckSuite
-from .Effect import EffectSuite
-from .State import Result, State
-from .Valids import ValidationException, Valids
+from game.Character import Character
+from game.Check import CheckSuite
+from game.Effect import EffectSuite
+from game.State import Result, State
+from game.Valids import ValidationException, Valids
 
 RARITIES = {
     "common": 30,

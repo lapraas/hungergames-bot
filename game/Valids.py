@@ -225,19 +225,24 @@ class EventPart:
             return cls(valids, *args)
             
         toCheck = args[1:]
+        
         argsStr = ", ".join(cls.args)
-        if not cls.args[-1].startswith("*"):
-            if cls.args[-1].endswith("?"):
-                if len(toCheck) != ct and len(toCheck) != ct - 1:
-                    raise ValidationException(f"Needs {ct - 1} or {ct} arguments ({len(toCheck)} recieved): {argsStr}")
-            else:
+        minCt = ct
+        while cls.args[minCt - 1].endswith("?"):
+            minCt -= 1
+            if minCt - 1 < 0:
+                break
+            
+        
+        if cls.args[-1].startswith("*"):
+            if len(toCheck) < ct:
+                raise ValidationException(f"Needs {minCt} or more arguments ({len(toCheck)} recieved): {argsStr}")
+        else:
+            if minCt == ct:
                 if len(toCheck) != ct:
                     raise ValidationException(f"Needs {ct} arguments ({len(toCheck)} recieved): {argsStr}")
-        else:
-            if cls.args[-1].endswith("?"):
-                ct -= 1
-            if len(toCheck) < ct:
-                raise ValidationException(f"Needs {ct} or more arguments ({len(toCheck)} recieved): {argsStr}")
+            elif len(toCheck) < minCt or len(toCheck) > ct:
+                raise ValidationException(f"Needs {minCt}-{ct} arguments ({len(toCheck)} recieved): {argsStr}")
         
         valids.validateArgs(cls.args, toCheck)
         return cls(valids, *[args[0], *toCheck])

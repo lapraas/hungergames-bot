@@ -35,21 +35,16 @@ def _match_url(url):
     else:
         return False
         
-class Character:
-    
-    ###
-    #
-    # Python overrides
-    #
-    ###
-    
-    def __init__(self, name: str, imgSrc: str, pronouns: tuple[str, str, str, str, bool]):
+class Character:    
+    def __init__(self, name: str, imgSrc: str, pronouns: tuple[str, str, str, str, str]):
         self.name = name
         self.imgSrc = imgSrc if _match_url(imgSrc) else None
         if not self.imgSrc:
             #print(f"got bad image url for character {self.string()}")
             pass
-        self.subj, self.obj, self.plur1, self.plur2, self.flex, self.plural = pronouns
+        self.subj, self.obj, self.plur1, self.plur2, self.flex = pronouns
+        self.plural = self.subj == "they"
+        
         self.replaces = {
             "they": self.subj,
             "them": self.obj,

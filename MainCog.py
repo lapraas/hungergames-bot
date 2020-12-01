@@ -19,7 +19,7 @@ MISCORANGE = 0xff9e1f
 ERRORRED = 0xe30f00
 BORDERBLACK = 0x000000
 
-class HGCog(commands.Cog):
+class MainCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.charactersSet = [""]
@@ -63,7 +63,7 @@ class HGCog(commands.Cog):
         if len(realArgs) == len(argNames):
             return realArgs
         
-        await ctx.send(embed=HGCog.getErrorEmbed(f"This command needs {len(argNames)} arguments ({argNamesStr}), {len(realArgs)} recieved. Args are comma-separated."))
+        await ctx.send(embed=MainCog.getErrorEmbed(f"This command needs {len(argNames)} arguments ({argNamesStr}), {len(realArgs)} recieved. Args are comma-separated."))
     
     @staticmethod
     def getCharEmbed(char: Character, title="", description="", color=MISCORANGE) -> Embed:
@@ -83,7 +83,7 @@ class HGCog(commands.Cog):
         """ Returns an Embed based on the Result object given by a triggered Event. """
         
         text = "\n\n".join(result.getTexts())
-        embed = HGCog.getCharEmbed(mc, "Event", text, EVENTGREEN)
+        embed = MainCog.getCharEmbed(mc, "Event", text, EVENTGREEN)
         effects = result.getEffects()
         for char in effects:
             resText = "\n".join(effects[char])
@@ -96,7 +96,7 @@ class HGCog(commands.Cog):
             If unsuccessful, sends an error embed to the given Context and returns None,
             otherwise returns the Character. """
         
-        args = await HGCog.checkArgs(ctx, args, ["character name"])
+        args = await MainCog.checkArgs(ctx, args, ["character name"])
         if not args: return None
         charName, = args
         char = self.game.getTributeByName(charName)
@@ -112,7 +112,7 @@ class HGCog(commands.Cog):
     @staticmethod
     def getExceptionEmbed(title: str, e: Exception) -> Embed:
         """ A special Embed creator for Exceptions. """
-        return HGCog.getErrorEmbed(title, f"Encountered error:\n\n{e}")
+        return MainCog.getErrorEmbed(title, f"Encountered error:\n\n{e}")
     
     @staticmethod
     def wrapAddCall(fun: Callable, callTitle: str, callDesc: str) -> Embed:
@@ -120,7 +120,7 @@ class HGCog(commands.Cog):
         try:
             fun()
         except LoadException as e:
-            return HGCog.getExceptionEmbed(callTitle, e)
+            return MainCog.getExceptionEmbed(callTitle, e)
             
         return Embed(
             title = callTitle,
@@ -166,11 +166,11 @@ class HGCog(commands.Cog):
     async def addchar(self, ctx: Context, *args: str):
         """ Adds a Character to the game. Takes a name, a gender or space-separated list of pronouns, and a portrait URL. """
         
-        args = await HGCog.checkArgs(ctx, args, ["name", "gender/pronouns", "portrait URL"])
+        args = await MainCog.checkArgs(ctx, args, ["name", "gender/pronouns", "portrait URL"])
         if not args: return
         charName, charGender, charURL = args
         
-        await ctx.send(embed=HGCog.wrapAddCall(
+        await ctx.send(embed=MainCog.wrapAddCall(
             lambda: ALL.addCharacter(charName, [charGender, charURL]),
             "Add Character",
             f"Added character {charName} with gender {charGender} and image URL {charURL}"
@@ -180,11 +180,11 @@ class HGCog(commands.Cog):
     async def additem(self, ctx: Context, *args: str):
         """ Adds an Item to the game. Takes a name and a space-separated list of tags."""
         
-        args = await HGCog.checkArgs(ctx, args, ["name", "tags"])
+        args = await MainCog.checkArgs(ctx, args, ["name", "tags"])
         if not args: return
         itemName, itemTags = args[:2]
         
-        await ctx.send(embed=HGCog.wrapAddCall(
+        await ctx.send(embed=MainCog.wrapAddCall(
             lambda: ALL.addItem(itemName, itemTags),
             "Add Item",
             f"Added item {itemName} with tags {itemTags}"
@@ -208,7 +208,7 @@ class HGCog(commands.Cog):
             
             self.game = self.getNewGame()
         except LoadException as e:
-            await ctx.send(embed=HGCog.getExceptionEmbed("Loading new game", e))
+            await ctx.send(embed=MainCog.getExceptionEmbed("Loading new game", e))
             return
             
         await ctx.send("Reloaded game.")
@@ -234,10 +234,10 @@ class HGCog(commands.Cog):
         res = self.game.round()
         
         if res == True:
-            await ctx.send(embed=HGCog.getErrorEmbed("There's already a round happening. Use .next to progress a round."))
+            await ctx.send(embed=MainCog.getErrorEmbed("There's already a round happening. Use .next to progress a round."))
             return
         if res == False:
-            await ctx.send(embed=HGCog.getErrorEmbed("The game hasn't been started. Use .start to start it."))
+            await ctx.send(embed=MainCog.getErrorEmbed("The game hasn't been started. Use .start to start it."))
             return
         
         await ctx.send(embed=Embed(
@@ -259,12 +259,12 @@ class HGCog(commands.Cog):
         if res == None:
             return self.next()
         if res == True:
-            await ctx.send(embed=HGCog.getErrorEmbed("The game hasn't been started. Use .start to start it."))
+            await ctx.send(embed=MainCog.getErrorEmbed("The game hasn't been started. Use .start to start it."))
             return True
         if res == False:
-            await ctx.send(embed=HGCog.getErrorEmbed("Round has ended, use `.round` to start another round."))
+            await ctx.send(embed=MainCog.getErrorEmbed("Round has ended, use `.round` to start another round."))
             return True
-        await ctx.send(embed=HGCog.getResultEmbed(res.getMainChar(), res))
+        await ctx.send(embed=MainCog.getResultEmbed(res.getMainChar(), res))
         
         if self.game.isRoundGoing(): return True
         
@@ -290,20 +290,20 @@ class HGCog(commands.Cog):
     async def trigger(self, ctx: Context, *args: str):
         """ Triggers an Event. Takes the name of a loaded Character and the name of a loaded Event. """
         
-        args = await HGCog.checkArgs(ctx, args, ["character name", "event name"])
+        args = await MainCog.checkArgs(ctx, args, ["character name", "event name"])
         if not args: return
         charName, eventName = args
         
         result = self.game.triggerByName(charName, eventName)
         char = self.game.getTributeByName(charName)
         
-        await ctx.send(embed=HGCog.getResultEmbed(char, result))
+        await ctx.send(embed=MainCog.getResultEmbed(char, result))
     
     @commands.command()
     async def give(self, ctx: Context, *args: str):
         """ Adds an Item to a Character's inventory. Takes the name of a loaded Character and the name of a loaded Item. """
         
-        args = await HGCog.checkArgs(ctx, args, ["character name", "item name"])
+        args = await MainCog.checkArgs(ctx, args, ["character name", "item name"])
         if not args: return
         charName, itemName = args
         tribute = self.game.getTributeByName(charName)
@@ -324,7 +324,7 @@ class HGCog(commands.Cog):
         char = await self.getSingleCharacter(ctx, args)
         if not char: return
         
-        embed = HGCog.getCharEmbed(char, color=CHARINFOBLUE)
+        embed = MainCog.getCharEmbed(char, color=CHARINFOBLUE)
         embed.add_field(name="Location:", value=char.getLocationStr())
         embed.add_field(name="Items:", value=char.getItemsStr())
         embed.add_field(name="Tags:", value=char.getTagsStr())
@@ -340,7 +340,7 @@ class HGCog(commands.Cog):
     async def listevents(self, ctx: Context):
         """ Lists all Events currently loaded in the game. """
         
-        await ctx.send(embed=HGCog.buildListEmbed(
+        await ctx.send(embed=MainCog.buildListEmbed(
             "Loaded Events:",
             self.game.getSortedEvents(),
             lambda event: event.getChanceAsStr()
@@ -350,7 +350,7 @@ class HGCog(commands.Cog):
     async def listitems(self, ctx: Context):
         """ Lists all Items currently loaded in the game. """
         
-        await ctx.send(embed=HGCog.buildListEmbed(
+        await ctx.send(embed=MainCog.buildListEmbed(
             "Loaded Items:",
             self.game.getSortedItems(),
             lambda item: item.getTagsStr()
@@ -360,7 +360,7 @@ class HGCog(commands.Cog):
     async def listzones(self, ctx: Context):
         """ Lists all Zones loaded in the game. """
         
-        await ctx.send(embed=HGCog.buildListEmbed(
+        await ctx.send(embed=MainCog.buildListEmbed(
             "Loaded Zones:",
             self.game.getSortedZones(),
             lambda zone: zone.getConnectionsStr(),
@@ -371,7 +371,7 @@ class HGCog(commands.Cog):
     async def listchars(self, ctx: Context):
         """ Lists all Characters loaded in the game. """
         
-        await ctx.send(embed=HGCog.buildListEmbed(
+        await ctx.send(embed=MainCog.buildListEmbed(
             "Loaded Characters:",
             self.game.getSortedTributes(),
             lambda char: char.getAliveStr()
