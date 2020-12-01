@@ -134,28 +134,30 @@ class Character:
     
     # Status
     
-    def getStatusAge(self):
+    def getStatusAge(self) -> int:
+        if not self.status: return -1
         return self.status.age
     
-    def hasStatus(self, name):
+    def hasStatus(self, name) -> bool:
+        if not self.status: return False
         return self.status.name == name
     
     # Alive
     
-    def isAlive(self):
+    def isAlive(self) -> bool:
         return self.alive
     
-    def getAge(self):
+    def getAge(self) -> int:
         """ Get the total number of rounds this Character has existed. """
         return self.age
     
-    def getRoundsSurvived(self):
+    def getRoundsSurvived(self) -> int:
         """ Get the total number of rounds this Character has been alive. """
         return self.roundsSurvived
     
     # Name
     
-    def getName(self):
+    def getName(self) -> str:
         return self.name
         
     def string(self, tag: str = None) -> str:
@@ -181,7 +183,7 @@ class Character:
     def isIn(self, loc: str) -> bool:
         return self.location.name == loc
     
-    def isNearby(self, other: Character):
+    def isNearby(self, other: Character) -> bool:
         return self.getLocation() == other.getLocation()
     
     # Items
@@ -267,7 +269,7 @@ class Character:
     
     # Tags
     
-    def addTag(self, tag: str, lasts: int=0):
+    def addTag(self, tag: str, lasts: int=None):
         if self.hasTag(tag): return
         if lasts:
             self.tags.append(Tag(tag, lasts))
@@ -277,6 +279,14 @@ class Character:
     def removeTag(self, tagName: str):
         tag = self.getTag(tagName)
         self.tags.remove(tag)
+    
+    # Status
+    
+    def makeStatus(self, name: str):
+        self.status = Tag(name, 0, True)
+    
+    def clearStatus(self):
+        self.status = None
     
     # Items
     

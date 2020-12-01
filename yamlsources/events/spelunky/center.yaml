@@ -1,18 +1,18 @@
 
-_DEFAULT first round, center: round= 1, in Center
+_DEFAULT first round, center: round = 1, in Center
 
 cornucopia start:
   chance: uncommon
   req:
     main:
   text: |
-    @main makes a break for the Cornucopia.
+    @main makes a break for the cornucopia.
   
   sub:
     success:
       chance: common
       req:
-        main: takefrom Cornucopia loot
+        main: loot loot Cornucopia
       text: |
         They@main find@main a&loot, grab@main it, and run@main.
       res:
@@ -35,7 +35,7 @@ cornucopia start:
         life:
           chance: mythic
           text: |
-            @main runs away from the Cornucopia's chaos before anything can happen to them@main.
+            @main runs away from the cornucopia's chaos before anything can happen to them@main.
           res:
             main: tag running 2
 
@@ -88,7 +88,7 @@ back to cornucopia:
     loot:
       chance: common
       req:
-        main: takefrom Cornucopia loot
+        main: loot loot Cornucopia
       text: |
         They@main find a&loot and quietly take@main it, running away after.
       res:

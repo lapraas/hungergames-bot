@@ -106,6 +106,8 @@ class Game:
         raise Exception(f"Invalid choice when choosing from events ({choice} out of {totalChance})")
     
     def start(self):
+        """ Starts the game, resetting all tributes and troves. """
+        
         if self.inProgress: return False
         self.inProgress = True
         for tribute in self.tributes.values():
@@ -117,22 +119,25 @@ class Game:
         return True
     
     def round(self) -> Optional[bool]:
+        """ Starts a game round. Increments the age of all tributes. """
         if self.toAct: return True
         if not self.inProgress: return False
         
         self.acted = []
         self.toAct = []
         for tribute in self.tributes.values():
+            tribute.incAge()
             self.toAct.append(tribute)
     
     def next(self) -> Union[Result, bool, None]:
+        """ Progresses a game round.
+            Chooses a random tribute that hasn't acted and triggers an Event for them. """
+        
         if not self.toAct: return True
         if not self.inProgress: return False
         
         acting = choice(self.toAct)
         self.toAct.remove(acting)
-        
-        acting.incAge()
         event = self.chooseFromEvents(acting)
         if not event: return None
         result = self.trigger(acting, event)

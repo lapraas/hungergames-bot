@@ -1,12 +1,13 @@
 
 from __future__ import annotations
+from game.Trove import Trove
 
 import re
 from typing import Callable, Type, Union
 
-from .Item import Item, Item
-from .Map import Map
-    
+from game.Item import Item, Item
+from game.Map import Map, Zone
+
 class Valids:
     """ Created per-Event to check to see if the Event will run in the Game. """
     
@@ -22,6 +23,27 @@ class Valids:
         for item in self.loadedItems.values():
             for tag in item.tags:
                 self.loadedItemTags.add(tag)
+        
+        self.checks = {
+            "char short": self.validateCharShort,
+            "item short": self.validateItemShort,
+            "char tag": self.validateCharTag,
+            "item name": self.validateLoadedItemName,
+            "item tag": self.validateLoadedItemTag,
+            "zone name": self.validateLoadedZoneName,
+            "trove name": self.validateLoadedTroveName,
+            "number": self.validateIsNumber,
+            "comparison": self.validateIsComparison,
+            "new item short": self.addItemShort,
+            "new char short": self.addCharShort,
+            "new char tag": self.addCharTag
+        }
+    
+    #
+    #
+    # Adding shorts and tags
+    #
+    #
     
     def addCharShort(self, short: str):
         self.charShorts.append(short)
@@ -31,8 +53,15 @@ class Valids:
         self.itemShorts.append(short)
     
     def addCharTag(self, name: str):
+        if name.startswith("!"): name = name[1:]
         if name in self.charTags: return
         self.charTags.append(name)
+
+    #
+    #
+    # Checking shorts and tags
+    #
+    #
 
     def validateCharShort(self, short: str):
         if not short in self.charShorts:
@@ -43,32 +72,123 @@ class Valids:
             raise ValidationException(f"Encountered an invalid Item shorthand: \"{short}\"")
     
     def validateCharTag(self, name: str):
+        if name.startswith("!"): name = name[1:]
         if not name in self.charTags:
             raise ValidationException(f"Encountered an invalid Character tag: \"{name}\"")
     
-    def validateLoadedItem(self, name: str):
-        if not name in self.loadedItems:
-            raise ValidationException(f"Encountered an invalid Item name (is it loaded?): \"{name}\"")
-    
     def validateLoadedItemTag(self, name: str):
         if name == "ANY" or name == "SECRET": return
+        if name.startswith("!"): name = name[1:]
         if not name in self.loadedItemTags:
             raise ValidationException(f"Encountered an invalid Item tag: \"{name}\"")
     
-    def validateLoadedZoneName(self, name: str):
+    def validateLoadedItemName(self, args: list[str]):
+        name = " ".join(args)
+        if not name in self.loadedItems:
+            raise ValidationException(f"Encountered an invalid Item name (is it loaded?): \"{name}\"")
+        return name
+    
+    def validateLoadedZoneName(self, args: list[str]):
+        name = " ".join(args)
         if not name in self.map.zones:
             raise ValidationException(f"Encountered an invalid Zone name: \"{name}\"")
+        return name
     
-    def validateLoadedTroveName(self, name: str):
+    def validateLoadedTroveName(self, args: list[str]):
+        name = " ".join(args)
         if not name in self.map.troves:
             raise ValidationException(f"Encountered an invalid Trove name: \"{name}\"")
+        return name
+    
+    #
+    #
+    # Type checks
+    #
+    #
     
     def validateIsNumber(self, arg):
         for let in arg:
             if let not in "1234567890-":
                 raise ValidationException(f"Encountered an invalid argument, expceted number: \"{arg}\"")
+        return int(arg)
     
-    def validateText(self, text):
+    def validateIsComparison(self, arg):
+        comparisons = "=!<>"
+        if not arg in comparisons:
+            raise ValidationException(f"Encountered an invalid argument, expeged comparison ({comparisons}): \"{arg}\"")
+        return arg
+
+    #
+    #
+    # Getters for selections
+    #
+    #
+    
+    def getLoadedItemsWithTags(self, tags: list[str]) -> list[Item]:
+        possItems = []
+        for item in self.loadedItems.values():
+            if item.hasAllTags(tags):
+                possItems.append(item)
+        return possItems
+    
+    def getLoadedItemWithName(self, name: str) -> Item:
+        # we've guaranteed the item name is valid when this is called
+        return self.loadedItems.get(name)
+    
+    def getLoadedZoneWithName(self, name: str) -> Zone:
+        return self.map.getZone(name)
+    
+    def getLoadedTroveWithName(self, name: str) -> Trove:
+        return self.map.getTrove(name)
+    
+    def validateArgs(self, types: list[str], args: list[str]) -> None:
+        i = 0
+        print("Validating")
+        print(f"  types: {types}")
+        print(f"  args:  {args}")
+        while i < len(types):
+            typ = types[i]
+            print(f"    typ: {typ}")
+            
+            if i >= len(args):
+                args.append(None)
+            arg = args[i]
+            print(f"    arg: {arg}")
+            
+            if typ == "any": # Matches any
+                i += 1
+                continue
+            
+            if typ.endswith("?"): # Nullable argument
+                typ = typ[:-1]
+                if arg == None:
+                    i += 1
+                    continue
+            
+            if typ.endswith("name"): # hello future me when this doesn't work smile
+                arg = args[i:]
+                args = args[:i+1]
+            if typ.startswith("*"): # Check the rest of the arguments against the current type
+                typ = typ[1:]
+                while len(types) < len(args):
+                    types.append(typ)
+            
+            typeFun = self.checks.get(typ)
+            if not typeFun: raise Exception(f"Couldn't find method for validating arg of type {typ}")
+            
+            cast = typeFun(arg)
+            if cast != None: args[i] = cast
+            
+            i += 1
+        print("Finished\n")
+    
+    #
+    #
+    # Text validation
+    #
+    #
+    
+    def validateText(self, text) -> None:
         textReplacePat = re.compile(r"([A-Za-z'\\]*)(@|&)(\w+)")
         matches = textReplacePat.finditer(text)
         for match in matches:
@@ -82,23 +202,6 @@ class Valids:
             elif objType == "@":
                 if not short in self.charShorts:
                     raise ValidationException(f"in text:\n    \"{text}\"\n    Encountered invalid Character shorthand: \"{tag}@{short}\"")
-
-    def getLoadedItemsWithTags(self, tags: list[str]):
-        possItems = []
-        for item in self.loadedItems.values():
-            if item.hasAllTags(tags):
-                possItems.append(item)
-        return possItems
-    
-    def getLoadedItemWithName(self, name: str):
-        # we've guaranteed the item name is valid when this is called
-        return self.loadedItems.get(name)
-    
-    def getLoadedZoneWithName(self, name: str):
-        return self.map.getZone(name)
-    
-    def getLoadedTroveWithName(self, name: str):
-        return self.map.getTrove(name)
 
 class ValidationException(Exception):
     """ Simple Exception for differentiating an Event's validation errors. """
@@ -116,25 +219,31 @@ class EventPart:
     
     @classmethod
     def build(cls, args: list[str], valids: Valids):
-        """ Gets an instance of thie EventPart, checking to see if the number of args match the expected number and erroring otherwise. """
-        checkArgCount(args, cls.args)
-        return cls(valids, *args)
-
-def checkArgCount(args: list[str], argNames: list[str]):
-    ct = len(argNames)
-    argsStr = ", ".join(argNames)
-    if not argNames[-1].startswith("*"):
-        if argNames[-1].endswith("?"):
-            if len(args) != ct and len(args) != ct - 1:
-                raise ValidationException(f"Needs {ct - 1} or {ct} arguments ({len(args)} recieved): {argsStr}")
+        """ Gets an instance of this EventPart, checking to see if the number of args match the expected number and erroring otherwise. """
+        ct = len(cls.args)
+        if not ct:
+            return cls(valids, *args)
+            
+        toCheck = args[1:]
+        argsStr = ", ".join(cls.args)
+        if not cls.args[-1].startswith("*"):
+            if cls.args[-1].endswith("?"):
+                if len(toCheck) != ct and len(toCheck) != ct - 1:
+                    raise ValidationException(f"Needs {ct - 1} or {ct} arguments ({len(toCheck)} recieved): {argsStr}")
+            else:
+                if len(toCheck) != ct:
+                    raise ValidationException(f"Needs {ct} arguments ({len(toCheck)} recieved): {argsStr}")
         else:
-            if len(args) != ct:
-                raise ValidationException(f"Needs {ct} arguments ({len(args)} recieved): {argsStr}")
-    else:
-        if argNames[-1].endswith("?"):
-            ct -= 1
-        if len(args) < ct:
-            raise ValidationException(f"Needs {ct} or more arguments ({len(args)} recieved): {argsStr}")
+            if cls.args[-1].endswith("?"):
+                ct -= 1
+            if len(toCheck) < ct:
+                raise ValidationException(f"Needs {ct} or more arguments ({len(toCheck)} recieved): {argsStr}")
+        
+        valids.validateArgs(cls.args, toCheck)
+        return cls(valids, *[args[0], *toCheck])
+    
+    def __init__(self, valids: Valids, *args: Union[str, int]):
+        pass
 
 class Suite:
     def __init__(self, charShort: str, argsLists: list[list[str]]):

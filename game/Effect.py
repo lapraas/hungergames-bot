@@ -4,7 +4,7 @@ from abc import abstractmethod
 
 from typing import Type
 
-from game.Character import Character
+from game.Character import Character, Tag
 from game.State import State
 from game.Valids import EventPart, Suite, Valids
 
@@ -16,35 +16,48 @@ class Effect(EventPart):
         pass
 
 class TagEffect(Effect):
-    args = ["type", "tag name", "tag duration?"]
+    args = ["any", "number?"]
     matches = ["tag"]
         
     def __init__(self, valids: Valids, *args: str):
-        _, self.tag = args[:2]
-        self.tagAge = "0"
-        if len(args) == 3: self.tagAge = args[2]
-        
-        valids.validateIsNumber(self.tagAge)
-        self.tagAge = int(self.tagAge)
+        _, self.tag, self.tagAge = args
     
     def perform(self, char: Character, state: State):
         char.addTag(self.tag, self.tagAge)
         return f"added tag: {self.tag}"
 
 class UntagEffect(Effect):
-    args = ["type", "tag name"]
+    args = ["char tag"]
     matches = ["untag"]
     
     def __init__(self, valids: Valids, *args: str):
         _, self.tag = args
-        valids.validateCharTag(self.tag)
     
     def perform(self, char: Character, state: State):
         char.removeTag(self.tag)
         return f"removed tag: {self.tag}"
 
+class StatusEffect(Effect):
+    args = ["any"]
+    matches = ["status"]
+    
+    def __init__(self, valids: Valids, *args: str):
+        _, self.status = args
+    
+    def perform(self, char: Character, state: State) -> str:
+        char.makeStatus(self.status)
+        return f"set status: {self.status}"
+
+class ClearEffect(Effect):
+    args = []
+    matches = ["clear"]
+    
+    def perform(self, char: Character, state: State) -> str:
+        char.clearStatus()
+        return "cleared status"
+
 class ItemEffect(Effect):
-    args = ["type", "item shorthand"]
+    args = ["item short"]
     matches = ["give"]
     
     def __init__(self, valids: Valids, *args: str):
@@ -56,12 +69,11 @@ class ItemEffect(Effect):
         return f"gave item: {item}"
 
 class AllyEffect(Effect):
-    args = ["type", "char shorthand"]
+    args = ["char short"]
     matches = ["ally"]
     
     def __init__(self, valids: Valids, *args: str):
         self.rType, self.charShort = args
-        valids.validateCharShort(self.charShort)
     
     def perform(self, char: Character, state: State):
         toAlly = state.getChar(self.charShort)
@@ -79,26 +91,22 @@ class AllyEffect(Effect):
             alliance = toAlly.getAlliance()
             char.leaveAlliance()
             char.joinAlliance(alliance)
-            return f"allied with: {toAlly}"
+            return f"joined alliance of: {toAlly}"
 
 class LeaveEffect(Effect):
-    args = ["type"]
+    args = []
     matches = ["leave"]
-    
-    def __init__(self, *_):
-        pass
     
     def perform(self, char: Character, state: State):
         char.leaveAlliance()
         return "left alliance"
 
 class ConsumeEffect(Effect):
-    args = ["type", "item shorthand"]
+    args = ["item short"]
     matches = ["consume"]
     
     def __init__(self, valids: Valids, *args: str):
         _, self.itemShort = args
-        valids.validateItemShort(self.itemShort)
     
     def perform(self, char: Character, state: State):
         item = state.getItem(self.itemShort)
@@ -106,15 +114,12 @@ class ConsumeEffect(Effect):
         return f"consumed item: {item}"
 
 class MoveEffect(Effect):
-    args = ["type", "zone name?"]
+    args = ["zone name?"]
     matches = ["move"]
     
     def __init__(self, valids: Valids, *args: str):
-        self.zone = None
-        if len(args) >= 2:
-            self.zone = args[1]
-            valids.validateLoadedZoneName(self.zone)
-            self.zone = valids.getLoadedZoneWithName(self.zone)
+        _, zoneName, = args
+        self.zone = valids.getLoadedZoneWithName(zoneName)
     
     def perform(self, char: Character, state: State):
         if self.zone:
@@ -124,22 +129,16 @@ class MoveEffect(Effect):
         return f"moved to zone: {char.getLocation().name}"
 
 class KillEffect(Effect):
-    args = ["type"]
+    args = []
     matches = ["kill"]
-    
-    def __init__(self, valids: Valids, *args: str):
-        pass
     
     def perform(self, char: Character, state: State):
         char.kill()
         return f"killed: {char.string()}"
 
 class ReviveEffect(Effect):
-    args = ["type"]
+    args = []
     matches = ["revive"]
-    
-    def __init__(self, valids: Valids, *args: str):
-        pass
     
     def perform(self, char: Character, state: State):
         char.revive()
@@ -148,11 +147,13 @@ class ReviveEffect(Effect):
 ALLEFFECTCLASSES: list[Type[EventPart]] = [
     AllyEffect,
     ConsumeEffect,
+    ClearEffect,
     ItemEffect,
     KillEffect,
     LeaveEffect,
     MoveEffect,
     ReviveEffect,
+    StatusEffect,
     TagEffect,
     UntagEffect
 ]

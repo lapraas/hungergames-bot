@@ -21,16 +21,11 @@ class DistanceCheck(Check):
     NEARBY = "nearby"
     ANYDISTANCE = "anydistance"
     
-    args = ["nearby state (type)", "target char shorthand?"]
+    args = ["char short?"]
     matches = [NEARBY, ANYDISTANCE]
     
     def __init__(self, valids: Valids, *args: str):
-        if len(args) == 2 and args[0] == DistanceCheck.NEARBY:
-            self.state, self.targetShort = args
-            valids.validateCharShort(self.targetShort)
-        else:
-            self.state, = args
-            self.targetShort = None
+        self.state, self.targetShort = args
     
     def check(self, char: Character, state: State) -> bool:
         if self.state == DistanceCheck.NEARBY:
@@ -43,7 +38,7 @@ class AliveCheck(Check):
     ALIVE = "alive"
     DEAD = "dead"
     
-    args = ["alive state (type)"]
+    args = []
     matches = [ALIVE, DEAD]
     
     def __init__(self, valids: Valids, *args: str):
@@ -59,13 +54,11 @@ class AloneCheck(Check):
     ALONE = "alone"
     ALLIED = "allied"
     
-    args = ["type"]
+    args = []
     matches = [ALONE, ALLIED]
 
     def __init__(self, valids: Valids, *args: str):
-        state, = args
-        
-        self.state = state
+        self.state, = args
     
     def check(self, char: Character, state: State) -> bool:
         if self.state == AloneCheck.ALONE and char.isAlone():
@@ -78,15 +71,11 @@ class RelationCheck(Check):
     ALLY = "ally"
     ENEMY = "enemy"
     
-    args = ["relationship (type)", "target char shorthand"]
+    args = ["char short"]
     matches = [ALLY, ENEMY]
         
     def __init__(self, valids: Valids, *args: str):
-        relationship, targetShort = args
-        valids.validateCharShort(targetShort)
-        
-        self.relationship = relationship
-        self.targetShort = targetShort
+        self.relationship, self.targetShort = args
     
     def check(self, char: Character, state: State):
         target = state.getChar(self.targetShort)
@@ -103,19 +92,14 @@ class TagCheck(Check):
     LT = "tag<"
     GT = "tag>"
     
-    args = ["tag check type", "tag name", "tag time?"]
+    args = ["new char tag", "number?"]
     matches = [NONE, EQ, LT, GT]
     
     def __init__(self, valids: Valids, *args: str):
-        self.tType, self.tag = args[:2]
-        self.age = "-1" if not len(args) > 3 else args[2]
+        self.tType, self.tag, self.age = args
         
         self.flip = self.tag.startswith("!")
         if self.flip: self.tag = self.tag[1:]
-        
-        valids.validateIsNumber(self.age)
-        self.age = int(self.age)
-        valids.addCharTag(self.tag)
     
     def check(self, char: Character, state: State):
         if self.tType in [TagCheck.NONE, TagCheck.GT]:
@@ -127,67 +111,61 @@ class TagCheck(Check):
         return toRet if not self.flip else not toRet
 
 class ItemCheck(Check):
-    BY_TAGS = "item"
-    BY_NAME = "item="
-    
-    args = ["type", "item shorthand", "*item tags"]
-    matches = [BY_TAGS, BY_NAME]
+    args = ["new item short", "*item tag"]
+    matches = ["item"]
     
     def __init__(self, valids: Valids, *args: str):
-        self.rType, self.itemShort, *itemTags = args
+        _, self.itemShort, *itemTags = args
         self.itemTags = itemTags
-        
-        valids.addItemShort(self.itemShort)
-        
-        if self.rType == ItemCheck.BY_TAGS:
-            for tag in self.itemTags:
-                valids.validateLoadedItemTag(tag)
+    
+    def get(self, char: Character):
+        return char.getItemByTags(self.itemTags)
     
     def check(self, char: Character, state: State) -> bool:
-        if self.rType == ItemCheck.BY_TAGS:
-            item = char.getItemByTags(self.itemTags)
-        else:
-            item = char.getItemByName(self.itemTags[0])
+        item = self.get(char)
         if not item: return False
         state.setItem(self.itemShort, item)
         return True
 
-class CreateCheck(Check):
-    BY_TAGS = "create"
-    BY_NAME = "create="
-    
-    args = ["type", "item shorthand", "*item tags"]
-    matches = [BY_TAGS, BY_NAME]
+class ItemNamedCheck(ItemCheck):
+    args = ["new item short", "item name"]
+    matches = ["itemnamed"]
     
     def __init__(self, valids: Valids, *args: str):
-        self.rType, self.itemShort, *itemTags = args
+        _, self.itemShort, self.itemName = args
+    
+    def get(self, char: Character):
+        return char.getItemByName(self.itemName)
+
+class CreateCheck(Check):
+    args = ["new item short", "*item tag"]
+    matches = ["create"]
+    
+    def __init__(self, valids: Valids, *args: str):
+        _, self.itemShort, *itemTags = args
         self.itemTags = itemTags
         
-        self.items: list[Item] = None
-        valids.addItemShort(self.itemShort)
-        
-        if self.rType == CreateCheck.BY_TAGS:
-            for tag in self.itemTags:
-                valids.validateLoadedItemTag(tag)
-        
-        if self.rType == CreateCheck.BY_TAGS:
-            self.items = valids.getLoadedItemsWithTags(self.itemTags)
-        else:
-            self.items = valids.getLoadedItemWithName(self.itemTags[0])
+        items: list[Item] = valids.getLoadedItemsWithTags(self.itemTags)
+        self.item = choice(items)
     
     def check(self, char: Character, state: State) -> bool:
-        item = choice(self.items)
-        state.setItem(self.itemShort, item)
+        state.setItem(self.itemShort, self.item)
         return True
 
+class CreateNamedCheck(CreateCheck):
+    args = ["new item short", "item name"]
+    matches = ["createnamed"]
+    
+    def __init__(self, valids: Valids, *args: str):
+        _, self.itemShort, self.itemName = args
+        self.item = valids.getLoadedItemWithName(self.itemName)
+
 class LocationCheck(Check):
-    args = ["type", "location name"]
+    args = ["zone name"]
     matches = ["in"]
     
     def __init__(self, valids: Valids, *args: str):
         _, self.locName = args
-        
-        valids.validateLoadedZoneName(self.locName)
     
     def check(self, char: Character, state: State) -> bool:
         return char.isIn(self.locName)
@@ -196,13 +174,11 @@ class LimitCheck(Check):
     TOTAL = "limittotal"
     PERCHAR = "limit"
     
-    args = ["count type", "trigger count"]
+    args = ["number"]
     matches = [PERCHAR, TOTAL]
     
     def __init__(self, valids: Valids, *args: str):
         self.cType, self.count = args
-        valids.validateIsNumber(self.count)
-        self.count = int(self.count)
     
     def check(self, char: Character, state: State) -> bool:
         if self.cType == LimitCheck.PERCHAR:
@@ -211,14 +187,12 @@ class LimitCheck(Check):
             return state.getTotalTriggers() <= self.count
 
 class TroveCheck(Check):
-    args = ["type", "trove name", "item short"]
-    matches = ["takefrom"]
+    args = ["new item short", "trove name"]
+    matches = ["loot"]
     
     def __init__(self, valids: Valids, *args: str):
-        _, self.troveName, self.newItemShort = args
-        valids.validateLoadedTroveName(self.troveName)
-        self.trove = valids.getLoadedTroveWithName(self.troveName)
-        valids.addItemShort(self.newItemShort)
+        _, self.newItemShort, troveName = args
+        self.trove = valids.getLoadedTroveWithName(troveName)
     
     def check(self, char: Character, state: State) -> bool:
         if not self.trove.hasItems():
@@ -227,39 +201,45 @@ class TroveCheck(Check):
         return True
 
 class RoundCheck(Check):
-    EQUAL = "round="
-    NOTEQUAL = "round!="
-    BEFORE = "round<"
-    AFTER = "round>"
-    
-    args = ["round comparison", "number"]
-    matches = [EQUAL, NOTEQUAL, BEFORE, AFTER]
+    args = ["comparison", "number"]
+    matches = ["round"]
     
     def __init__(self, valids: Valids, *args: str):
-        self.rType, self.number = args
-        valids.validateIsNumber(self.number)
-        self.number = int(self.number)
+        _, self.comp, self.number = args
+    
+    def getVal(self, char: Character) -> int:
+        return char.getAge()
     
     def check(self, char: Character, state: State) -> bool:
-        if self.rType == RoundCheck.EQUAL:
-            return self.number == char.getAge()
-        if self.rType == RoundCheck.NOTEQUAL:
-            return self.number != char.getAge()
-        if self.rType == RoundCheck.BEFORE:
-            return char.getAge() < self.number
-        if self.rType == RoundCheck.AFTER:
-            return char.getAge() > self.number
+        if self.comp == "=":
+            return self.number == self.getVal(char)
+        if self.comp == "!":
+            return self.number != self.getVal(char)
+        if self.comp == "<":
+            return self.getVal(char) < self.number
+        if self.comp == ">":
+            return self.getVal(char) > self.number
+
+class StatusCheck(RoundCheck):
+    args = ["comparison", "number"]
+    matches = ["status"]
+    
+    def getVal(self, char: Character) -> int:
+        return char.getStatusAge()
 
 ALLCHECKCLASSES: list[Type[EventPart]] = [
     AliveCheck,
     AloneCheck,
     CreateCheck,
+    CreateNamedCheck,
     DistanceCheck,
     ItemCheck,
+    ItemNamedCheck,
     LimitCheck,
     LocationCheck,
     RelationCheck,
     RoundCheck,
+    StatusCheck,
     TagCheck,
     TroveCheck
 ]
@@ -278,7 +258,7 @@ class CheckSuite(Suite):
             if (not any([type(check) == AliveCheck for check in self.checks])):
                 self.checks.insert(0, AliveCheck(valids, AliveCheck.ALIVE))
             if (not any([type(check) == RoundCheck for check in self.checks])):
-                self.checks.insert(0, RoundCheck(valids, RoundCheck.NOTEQUAL, "1"))
+                self.checks.insert(0, RoundCheck(valids, None, "!", 1))
     
     def addNearbyCheckIfNeeded(self, valids: Valids):
         if (not any([type(check) == AliveCheck for check in self.checks])):
