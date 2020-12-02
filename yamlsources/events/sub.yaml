@@ -1,62 +1,40 @@
 
 hello world sub:
-  chance: common
-  req:
-    main:
+  main:
   text: |
     @main spots two cameras hidden in trees nearby - one to the left, one to the right.
-  
-  sub:
-    left:
-      chance: mythic
-      text: |
-        They@main decide@main to say "Hello, world!" to the one on the left. Thanks for the help, @main!
-    right:
-      chance: common
-      text: |
-        They@main decide@main to say "Hello, world!" to the one on the right. Thanks for the help, @main!
+  -> left:
+    text: |
+      They@main decide@main to say "Hello, world!" to the one on the left. Thanks for the help, @main!
+  -> right:
+    text: |
+      They@main decide@main to say "Hello, world!" to the one on the right. Thanks for the help, @main!
 
 oneoff sub:
-  chance: common
-  req:
-    main:
+  main:
   text: |
     @main spots a camera hidden in the trunk of a nearby tree.
-  
-  sub:
-    smash:
-      chance: common
-      req:
-        main: limittotal 1
-      text: |
-        They@main smash@main it, rendering it useless.
-    default:
-      chance: DEFAULT
-      text: |
-        The camera has already been destroyed; they@main don't need to do anything to it.
+  -> smash:
+    main: limittotal 1
+    text: |
+      They@main smash@main it, rendering it useless.
+  -> default:
+    text: |
+      The camera has already been destroyed; they@main don't need to do anything to it.
 
 commune with spirits:
-  chance: common
-  req:
-    main:
-    other: dead
+  main:
+  other: dead
   text: |
     @main prepares a pentagram and tries to summon @other. They@other appear@other as a ghost before them@main.
-    
-  sub:
-    warm revive:
-      chance: mythic
-      text: |
-        The two have a heartwarming conversation. After a while, @other miraculously fades back into existence, revived by the newfound companionship.
-      res:
-        other: revive, ally main
-    revive:
-      chance: shiny
-      text: |
-        @other slowly begins to fade back into existence. They@other thank@other @main and the two part ways.
-      res:
-        other: revive
-    unsuccessful:
-      chance: uncommon
-      text: |
-        The two start to talk, but all of a sudden, @other disappears. Disheartened, @main leaves the scene.
+  -> warm revive:
+    other: ; revive, ally main
+    text: |
+      The two have a heartwarming conversation. After a while, @other miraculously fades back into existence, revived by the newfound companionship.
+  -> revive:
+    other: ; revive
+    text: |
+      @other slowly begins to fade back into existence. They@other thank@other @main and the two part ways.
+  -> unsuccessful:
+    text: |
+      The two start to talk, but all of a sudden, @other disappears. Disheartened, @main leaves the scene.

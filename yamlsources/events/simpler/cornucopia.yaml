@@ -1,43 +1,26 @@
 
-_DEFAULT first round: round = 1
+USING first round: round = 1, in The Dome
 
 loot start:
-  chance: rare
-  req:
-    main: loot loot Cornucopia
+  main: loot loot Cornucopia; give loot, tag running 2
   text: |
     @main makes a break for the Cornucopia, snatches a &loot, and runs away.
-  res:
-    main: give loot, tag running 2
 
 run start:
-  chance: rare
-  req:
-    main:
+  main: ; tag running 2
   text: |
     @main doesn't want anything to do with the Cornucopia. They@main run@main far away.
-  res:
-    main: tag running 2
 
 dead start:
-  chance: uncommon
-  req:
-    main:
-    enemy: enemy main, item weap weapon
+  main: ; kill
+  enemy: enemy main, item weap weapon
   text: |
     @main runs up to the Cornucopia, but meets @enemy's found &weap.
-  res:
-    main: kill
 
 hide start:
-  chance: rare
-  req:
-    main:
+  main: ; tag hiding 1
   text: |
     @main decides to wait until the chaos has cleared from the Cornucopia.
-  res:
-    main: tag hiding 1
 
-_DEFAULT: 
-
+USING none:
 

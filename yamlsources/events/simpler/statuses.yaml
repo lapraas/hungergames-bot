@@ -1,76 +1,46 @@
 
 stalk:
-  chance: mythic
-  req:
-    main: alone
-    enemy: enemy main, alone
+  main: alone; status stalking
+  enemy: enemy main, alone; tag stalked
   text: |
     @main comes across @enemy and decides to follow them@enemy.
-  res:
-    main: status stalking
-    enemy: tag stalked
 
 stalk kill:
-  chance: rarer
-  req:
-    main: alone, status stalking, item weap weapon
-    enemy: enemy main, alone, tag stalked
+  main: alone, status stalking, item weap weapon; clear
+  enemy: enemy main, alone, tag stalked; kill
   text: |
     @main, after following them@enemy for a while, brandishes their@main &weap and sneaks up on @enemy, killing them@enemy quickly.
-  res:
-    main: clear
-    enemy: kill
 
 stalk stop:
-  chance: common
-  req:
-    main: alone, status stalking > 3
-    enemy: enemy main, alone, tag stalked
+  main: alone, status stalking > 3; clear
+  enemy: enemy main, alone, tag stalked; untag stalked
   text: |
     @main gives up on following @enemy.
-  res:
-    main: clear
-    enemy: untag stalked
 
 stalk continue:
-  chance: mythic
-  req:
-    main: alone, status stalking
-    enemy: enemy main, alone, tag stalked
+  main: alone, status stalking
+  enemy: enemy main, alone, tag stalked
   text: |
     @main continues to stalk @enemy from a safe distance.
 
 find cave:
-  chance: mythic
-  req:
-    main: alone
+  main: alone
   text: |
     @main finds a cave.
   
-  sub:
-    enter:
-      chance: common
-      req:
-        main: item light light
-      text: |
-        @main takes out their@main &light and enters.
-      res:
-        main: status spelunking
-    leave:
-      chance: DEFAULT
-      text: |
-        It looks very dark in there. They@main decide@main not to go in.
+  -> enter:
+    main: item light light; status spelunking
+    text: |
+      @main takes out their@main &light and enters.
+  -> leave:
+    DEFAULT:
+    text: |
+      It looks very dark in there. They@main decide@main not to go in.
 
-_DEFAULT spelunking: status spelunking, item light light
+USING spelunking: status spelunking, item light light
 
 spelunk explore:
-  chance: rare
-  req:
-    main:
+  main:
   text: |
     @main explores the cave, holding their &light high.
-
-#spelunk leave:
-#  chance: rare
-#  req:
-#    main: 
+    While @main explores the cave, their &light flickers for a moment.

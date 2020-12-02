@@ -2,11 +2,11 @@
 from random import choice, randint
 from typing import Optional, Union
 
-from .Character import Character
-from .Event import Event
-from .Item import Item, Item
-from .Map import Map
-from .State import Result, State
+from game.Character import Character
+from game.Event import Event
+from game.Item import Item, Item
+from game.Map import Map
+from game.State import Result, State
 
 
 class Game:

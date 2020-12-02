@@ -81,23 +81,17 @@ class Valids:
         if not name in self.loadedItemTags:
             raise ValidationException(f"Encountered an invalid Item tag: \"{name}\"")
     
-    def validateLoadedItemName(self, args: list[str]):
-        name = " ".join(args)
+    def validateLoadedItemName(self, name: str):
         if not name in self.loadedItems:
             raise ValidationException(f"Encountered an invalid Item name (is it loaded?): \"{name}\"")
-        return name
     
-    def validateLoadedZoneName(self, args: list[str]):
-        name = " ".join(args)
+    def validateLoadedZoneName(self, name: str):
         if not name in self.map.zones:
             raise ValidationException(f"Encountered an invalid Zone name: \"{name}\"")
-        return name
     
-    def validateLoadedTroveName(self, args: list[str]):
-        name = " ".join(args)
+    def validateLoadedTroveName(self, name: str):
         if not name in self.map.troves:
             raise ValidationException(f"Encountered an invalid Trove name: \"{name}\"")
-        return name
     
     #
     #
@@ -142,17 +136,17 @@ class Valids:
     
     def validateArgs(self, types: list[str], args: list[str]) -> None:
         i = 0
-        #print("Validating")
-        #print(f"  types: {types}")
-        #print(f"  args:  {args}")
+        print("Validating")
+        print(f"  types: {types}")
+        print(f"  args:  {args}")
         while i < len(types):
             typ = types[i]
-            #print(f"    typ: {typ}")
+            print(f"    typ: {typ}")
             
             if i >= len(args):
                 args.append(None)
             arg = args[i]
-            #print(f"    arg: {arg}")
+            print(f"    arg: {arg}")
             
             if typ == "any": # Matches any
                 i += 1
@@ -165,8 +159,12 @@ class Valids:
                     continue
             
             if typ.endswith("name"): # hello future me when this doesn't work smile
-                arg = args[i:]
+                print("    turning arg into name")
+                arg = " ".join(args[i:])
+                args[i] = arg
                 args = args[:i+1]
+                print("    " + arg)
+                print(f"    {args}")
             if typ.startswith("*"): # Check the rest of the arguments against the current type
                 typ = typ[1:]
                 while len(types) < len(args):
@@ -179,7 +177,8 @@ class Valids:
             if cast != None: args[i] = cast
             
             i += 1
-        #print("Finished\n")
+        print("Finished\n")
+        return args
     
     #
     #
@@ -233,7 +232,7 @@ class EventPart:
                 break
             
         
-        if cls.args[-1].startswith("*"):
+        if cls.args[-1].startswith("*") or cls.args[-1].endswith("name"):
             if len(toCheck) < ct:
                 raise ValidationException(f"Needs {minCt} or more arguments ({len(toCheck)} recieved): {argsStr}")
         else:
@@ -243,7 +242,7 @@ class EventPart:
             elif len(toCheck) < minCt or len(toCheck) > ct:
                 raise ValidationException(f"Needs {minCt}-{ct} arguments ({len(toCheck)} recieved): {argsStr}")
         
-        valids.validateArgs(cls.args, toCheck)
+        toCheck = valids.validateArgs(cls.args, toCheck)
         return cls(valids, *[args[0], *toCheck])
     
     def __init__(self, valids: Valids, *args: Union[str, int]):

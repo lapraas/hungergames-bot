@@ -1,61 +1,41 @@
 
-_DEFAULT caves: in Caves
+USING in Caves: in Caves
 
 caves hide:
-  chance: mythic
-  req:
-    main: alone, tag !running
+  main: alone, tag !running; status hiding
   text: |
     While @main is wandering through the dark caves, they@main spot@main a particularly tucked-away nook. They@main decide@main to hide away for a while.
-  res:
-    main: status hiding
 
 caves hiding wait:
-  chance: mythic
-  req:
-    main: status hiding
+  main: status hiding
   text: |
     @main keeps waiting in their@main hiding place.
 
 caves hiding exit:
-  chance: uncommon
-  req:
-    main: status hiding > 1
+  main: status hiding > 1; clear
   text: |
     @main gets tired of waiting and ventures further into the depths of the Caves.
-  res:
-    main: clear
 
 caves hiding encounter:
-  chance: secret
-  req:
-    main: status hiding
-    enemy: enemy main, alone
+  main: status hiding
+  enemy: enemy main, alone
   text: |
     @main sees @enemy pass their@main nook in the darkness. @enemy seems not to have noticed them@main.
-  
-  sub:
-    scared:
-      chance: common
-      req:
-        enemy: item weap weapon
-      text: |
-        Their@enemy &weap makes @main happy they@main have@main a place to hide.
-    ambush:
-      chance: rarer
-      req:
-        main: item weap weapon
-      text: |
-        @main, as quietly as they@main can, slide@main out of their@main hiding spot, taking out their@main &weap. @enemy doesn't even know what hit them@enemy. @main leaves the scene, their@main &weap dirtied.
-      res:
-        main: clear
-        enemy: kill
-    passive:
-      chance: mythic
-      text: |
-        @main decides it's best for them@main to stay in hiding.
-    aggressive:
-      chance: secret
-      text: |
-        Before @enemy can get to far, @main runs out an strikes.
+  -> scared:
+    enemy: item weap weapon
+    text: |
+      Their@enemy &weap makes @main happy they@main have@main a place to hide.
+  -> passive:
+    text: |
+      @main decides it's best for them@main to stay in hiding.
+  -> ambush:
+    main: item weap weapon; clear
+    enemy: ; kill
+    text: |
+      @main, as quietly as they@main can, slide@main out of their@main hiding spot, taking out their@main &weap. @enemy doesn't even know what hit them@enemy. @main leaves the scene, their@main &weap dirtied.
+  -> ambush2:
+    main: ; clear
+    enemy: ; kill
+    text: |
+      Before @enemy can get to far, @main runs out an strikes.
         

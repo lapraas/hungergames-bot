@@ -1,117 +1,64 @@
 
-_DEFAULT first round, center: round = 1, in Center
+USING first round, center: round = 1, in Center
 
 cornucopia start:
-  chance: uncommon
-  req:
-    main:
+  main:
   text: |
     @main makes a break for the cornucopia.
-  
-  sub:
-    success:
-      chance: common
-      req:
-        main: loot loot Cornucopia
+  -> success:
+    main: loot loot Cornucopia; give loot, tag running 2
+    text: |
+      They@main find@main a&loot, grab@main it, and run@main.
+  -> default:
+    text: |
+      They@main weren't@main quick enough - everything has already been looted.
+    -> death:
+      enemy: enemy main, item eWeap weapon
+      main: ; kill
       text: |
-        They@main find@main a&loot, grab@main it, and run@main.
-      res:
-        main: give loot, tag running 2
-    
-    fail:
-      chance: DEFAULT
+        @enemy finds @main trying to run away and chases them@main down with a&eWeap. @enemy makes quick work of a defenseless @main.
+    -> life:
+      main: ; tag running 2
       text: |
-        They@main weren't@main quick enough - everything has already been looted.
-      
-      sub:
-        death:
-          chance: uncommon
-          req:
-            enemy: enemy main, item eWeap weapon
-          text: |
-            @enemy finds @main trying to run away and chases them@main down with a&eWeap. @enemy makes quick work of a defenseless @main.
-          res:
-            main: kill
-        life:
-          chance: mythic
-          text: |
-            @main runs away from the cornucopia's chaos before anything can happen to them@main.
-          res:
-            main: tag running 2
+        @main runs away from the cornucopia's chaos before anything can happen to them@main.
 
 run start:
-  chance: rarer
-  req:
-    main:
+  main:
   text: |
     @main wants nothing to do with the cornucopia, running immediately.
-  
-  sub:
-    tidepools:
-      chance: common
-      text: |
-        They@main head@main towards the Tidepools.
-      res:
-        main: move Tidepools
-    jungle:
-      chance: common
-      text: |
-        They@main head@main towards the Jungle.
-      res:
-        main: move Jungle
-    caves:
-      chance: common
-      text: |
-        They@main head@main towards the Caves.
-      res:
-        main: move Caves
+  -> tidepools:
+    main: move Tidepools
+    text: |
+      They@main head@main towards the Tidepools.
+  -> jungle:
+    main: move Jungle
+    text: |
+      They@main head@main towards the Jungle.\
+  -> caves:
+    main: move Caves
+    text: |
+      They@main head@main towards the Caves.
 
 hide start:
-  chance: mythic
-  req:
-    main:
+  main: ; tag hiding 1
   text: |
     @main holds off on the cornucopia, finding a place to hide instead.
-  res:
-    main: tag hiding 1
 
-_DEFAULT center: in Center
+USING center: in Center
 
 back to cornucopia:
-  chance: common
-  req:
-    main: tag hiding, limittotal 1
+  main: tag hiding, limittotal 1
   text: |
     Once they've@main let everything calm down, @main sneaks up to the cornucopia.
-  
-  sub:
-    loot:
-      chance: common
-      req:
-        main: loot loot Cornucopia
-      text: |
-        They@main find a&loot and quietly take@main it, running away after.
-      res:
-        main: give loot, untag hiding
-    
-    noloot:
-      chance: DEFAULT
-      text: |
-        Everything has already been looted. Dismayed, they@main run@main away from the cornucopia.
+  -> loot:
+    main: loot loot Cornucopia; give loot, untag hiding
+    text: |
+      They@main find a&loot and quietly take@main it, running away after.
+  -> default:
+    text: |
+      Everything has already been looted. Dismayed, they@main run@main away from the cornucopia.
 
 leave center default:
-  chance: shiny
-  req:
-    main:
+  main: ; move
   text: |
     @main decides to leave the Center, running off to the place they@main think@main looks the coolest.
-  res:
-    main: move
-
-leave center run:
-  using: run start
-  chance: common
-  req:
-    main: tag running
-  text: |
-    @main runs away from the Center.

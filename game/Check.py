@@ -16,6 +16,10 @@ class Check(EventPart):
         """ Checks to see if the Character meets this Check.
             Returns True if so, False otherwise. """
         pass
+    
+    @abstractmethod
+    def chanceMultiplier(self):
+        """ Gets the multiplier for the chance value of the Event that this Check is a part of. """
 
 class DistanceCheck(Check):
     NEARBY = "nearby"

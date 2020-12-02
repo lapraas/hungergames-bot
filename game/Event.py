@@ -20,14 +20,15 @@ RARITIES = {
 }
 
 class Event:
-    def __init__(self, name: str, chance: int, text: list[str], checkNamesToArgLists: dict[str, list[list[str]]], effectNamesToArgLists: dict[str, list[list[str]]], sub: list[Event]):
+    def __init__(self, name: str, text: list[str], checkNamesToArgLists: dict[str, list[list[str]]], effectNamesToArgLists: dict[str, list[list[str]]], sub: list[Event]):
         self.name = name
-        self.chance = chance
         self.texts = text
         self.checkSuites = [CheckSuite(checkName, checkNamesToArgLists[checkName]) for checkName in checkNamesToArgLists]
         self.effectSuites = [EffectSuite(effectName, effectNamesToArgLists[effectName]) for effectName in effectNamesToArgLists]
         self.sub = sub
         self.triggerCts: dict[Character, int] = {}
+        
+        self.chance = 100
     
     def __repr__(self):
         return f"Event {self.name}"
@@ -39,7 +40,7 @@ class Event:
         return self.name
     
     def getChance(self):
-        return RARITIES[self.chance]
+        return self.chance
     
     def getChanceAsStr(self):
         return self.chance
