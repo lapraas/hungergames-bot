@@ -27,15 +27,15 @@ run start:
   text: |
     @main wants nothing to do with the cornucopia, running immediately.
   -> tidepools:
-    main: move Tidepools
+    main: ; move Tidepools
     text: |
       They@main head@main towards the Tidepools.
   -> jungle:
-    main: move Jungle
+    main: ; move Jungle
     text: |
       They@main head@main towards the Jungle.\
   -> caves:
-    main: move Caves
+    main: ; move Caves
     text: |
       They@main head@main towards the Caves.
 

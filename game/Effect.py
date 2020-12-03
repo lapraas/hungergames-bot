@@ -119,7 +119,10 @@ class MoveEffect(Effect):
     
     def __init__(self, valids: Valids, *args: str):
         _, zoneName, = args
-        self.zone = valids.getLoadedZoneWithName(zoneName)
+        self.zone = None
+        if zoneName:
+            self.zone = valids.getLoadedZoneWithName(zoneName)
+        
     
     def perform(self, char: Character, state: State):
         if self.zone:

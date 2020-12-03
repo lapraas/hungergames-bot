@@ -1,5 +1,6 @@
 
 from __future__ import annotations
+from abc import ABC
 from game.Trove import Trove
 
 import re
@@ -205,7 +206,7 @@ class ValidationException(Exception):
     """ Simple Exception for differentiating an Event's validation errors. """
     pass
 
-class EventPart:
+class EventPart(ABC):
     args: list[str]
     matches: list[str]
     
@@ -242,7 +243,7 @@ class EventPart:
             elif len(toCheck) < minCt or len(toCheck) > ct:
                 raise ValidationException(f"Needs {minCt}-{ct} arguments ({len(toCheck)} recieved): {argsStr}")
         
-        toCheck = valids.validateArgs(cls.args, toCheck)
+        toCheck = valids.validateArgs(list(cls.args), toCheck)
         return cls(valids, *[args[0], *toCheck])
     
     def __init__(self, valids: Valids, *args: Union[str, int]):
@@ -269,7 +270,7 @@ class Suite:
                     found = True
                     break
             if not found:
-                raise self.exception(args, "Not recognized as a valid Effect")
+                raise self.exception(args, "Not recognized as a valid event part")
         return valids
     
     def exception(self, args: list[str], e: Union[Exception, str]):

@@ -16,10 +16,6 @@ class Check(EventPart):
         """ Checks to see if the Character meets this Check.
             Returns True if so, False otherwise. """
         pass
-    
-    @abstractmethod
-    def chanceMultiplier(self):
-        """ Gets the multiplier for the chance value of the Event that this Check is a part of. """
 
 class DistanceCheck(Check):
     NEARBY = "nearby"
@@ -121,6 +117,10 @@ class StatusCheck(ComparisonCheck):
     
     def __init__(self, valids: Valids, *args: str):
         _, self.status, self.comp, self.number = args
+        if not self.comp:
+            self.comp = ">"
+        if not self.number:
+            self.number = 0
     
     def getVal(self, char: Character) -> int:
         return char.getStatusAge()
@@ -135,8 +135,8 @@ class TagCheck(ComparisonCheck):
     
     def __init__(self, valids: Valids, *args: str):
         _, self.tag, self.comp, self.age = args
-        
         self.flip = self.tag.startswith("!")
+        
         if self.flip: self.tag = self.tag[1:]
     
     def getVal(self, char: Character) -> int:
@@ -173,6 +173,17 @@ class ItemNamedCheck(ItemCheck):
     
     def get(self, char: Character):
         return char.getItemByName(self.itemName)
+
+class NeedsCheck(Check):
+    args = ["*item tag"]
+    matches = ["needs"]
+    
+    def __init__(self, valids: Valids, *args: str):
+        _, *itemTags = args
+        self.itemTags = itemTags
+    
+    def check(self, char: Character, state: State) -> bool:
+        return char.getItemByTags(self.itemTags) == False
 
 class CreateCheck(Check):
     args = ["new item short", "*item tag"]
@@ -237,7 +248,20 @@ class TroveCheck(Check):
         state.setItem(self.newItemShort, self.trove.loot())
         return True
 
+class AddChanceCheck(Check):
+    args = ["number?"]
+    matches = ["luck"]
+    
+    def __init__(self, valids: Valids, *args: str):
+        _, self.number = args
+        if not self.number: self.number = 1
+    
+    def check(self, char: Character, state: State) -> bool:
+        state.addChances(self.number)
+        return True
+
 ALLCHECKCLASSES: list[Type[EventPart]] = [
+    AddChanceCheck,
     AliveCheck,
     AloneCheck,
     CreateCheck,
@@ -247,6 +271,7 @@ ALLCHECKCLASSES: list[Type[EventPart]] = [
     ItemNamedCheck,
     LimitCheck,
     LocationCheck,
+    NeedsCheck,
     RelationCheck,
     RoundCheck,
     StatusCheck,
@@ -275,7 +300,7 @@ class CheckSuite(Suite):
     
     def addNearbyCheckIfNeeded(self, valids: Valids):
         if (not any([type(check) == AliveCheck for check in self.checks])):
-            self.checks.insert(0, DistanceCheck(valids, DistanceCheck.NEARBY))
+            self.checks.insert(0, DistanceCheck(valids, DistanceCheck.NEARBY, None))
     
     def checkAll(self, char: Character, state: State):
         if char.status and not self.isSubEvent:

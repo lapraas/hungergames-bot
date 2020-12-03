@@ -12,14 +12,23 @@ class State:
         It also compiles each of the Results' strings with the Character the Result was performed on.
         """
     
-    def __init__(self, eventTriggers: dict[Character, int]):
+    def __init__(self, eventTriggers: dict[Character, int], baseChance: int=100, deep=0):
         self.eventTriggers = eventTriggers
+        self.baseChance = baseChance
+        self.deep = deep
         
         self.charsPool = {}
         self.itemsPool = {}
         self.mainCharShort: str = None
+        self.chance = self.baseChance
         
         self.resultStrs: dict[Character, list[str]] = {}
+    
+    def sub(self, eventTriggers, baseChance: int) -> State:
+        newState = State(eventTriggers, baseChance, self.deep + 1)
+        newState.charsPool = self.charsPool
+        newState.itemsPool = self.itemsPool
+        return newState
     
     def getTriggersFor(self, char: Character):
         """ Gets the number of times the State's Event has triggered for a certain Character. """
@@ -60,6 +69,11 @@ class State:
     def getItem(self, itemShort: str) -> Optional[Item]:
         """ Gets an Item matched to a shorthand. """
         return self.itemsPool.get(itemShort)
+    
+    def addChances(self, n: int=1):
+        self.chance += int(self.baseChance * n)
+        if self.chance <= 0 and self.baseChance != 0:
+            self.chance = 1
 
 class Result:
     def __init__(self, mainChar: Character):

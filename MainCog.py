@@ -11,7 +11,8 @@ from discord.ext.commands.context import Context
 
 from game.Character import Character
 from game.All import All, LoadException
-ALL = All("./yamlsources")
+#ALL = All("./yamlsources")
+ALL = All("./mysterydungeon", charsDirName="../yamlsources/characters")
 
 EVENTGREEN = 0xbbff45
 CHARINFOBLUE = 0x2c32db
@@ -23,12 +24,10 @@ class MainCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.charactersSet = [""]
-        self.itemsSet = ["spelunky"]
-        self.mapSet = "simplespelunky"
-        self.eventsSet = ["spelunky"]
+        self.itemsSet = [""]
+        self.mapSet = "simple"
+        self.eventsSet = [""]
         self.game = self.getNewGame()
-        self.game.start()
-        self.game.round()
         
     ###
     # Utility things
@@ -129,12 +128,22 @@ class MainCog(commands.Cog):
         )
     
     @staticmethod
-    def buildListEmbed(title, sorteds: tuple[str, Any], valueFun: Callable[[Any], str], inline: bool=True):
+    def buildListEmbed(title: str, sorteds: tuple[str, Any], valueFun: Callable[[Any], str], inline: bool=True):
         """ Builds an embed with a list of game objects. Used by the .list commands. """
-        embed = Embed(title=title, color=MISCORANGE)
-        for name, obj in sorteds:
-            embed.add_field(name=name, value=valueFun(obj), inline=inline)
-        return embed
+        embeds = []
+        for x in range(int(len(sorteds) / 25)+1):
+            n = x * 25
+            embed = Embed(title=title, color=MISCORANGE)
+            for name, obj in sorteds[n:n+25]:
+                embed.add_field(name=name, value=valueFun(obj), inline=inline)
+            embeds.append(embed)
+        
+        return embeds
+    
+    @staticmethod
+    def buildSingleListEmbed(title: str, sorteds: tuple[str, Any], valueFun: Callable[[Any], str]):
+        embedStr = "\n".join([f"{name}: {valueFun(obj)}" for name, obj in sorteds])
+        return Embed(title=title, description=embedStr, color=MISCORANGE)
     
     ############
     # Commands #
@@ -207,7 +216,7 @@ class MainCog(commands.Cog):
             self.eventsSet = [a.strip() for a in args[3].split(" ")]
             
             self.game = self.getNewGame()
-        except LoadException as e:
+        except Exception as e:
             await ctx.send(embed=MainCog.getExceptionEmbed("Loading new game", e))
             return
             
@@ -217,29 +226,15 @@ class MainCog(commands.Cog):
     async def start(self, ctx: Context):
         """ Starts the game if it hasn't already been started. """
         res = self.game.start()
-        await ctx.send(embed=Embed(
-            title = "Starting game",
-            description = "Game started" if res else "Game was already started",
-            color = MISCORANGE if res else ERRORRED
-        ))
-    
-    @commands.command()
-    async def round(self, ctx: Context):
-        """ Starts a game round if one is not already happening. """
-        try:
-            await ctx.message.delete()
-        except (Forbidden, NotFound):
-            pass
-        
-        res = self.game.round()
-        
-        if res == True:
-            await ctx.send(embed=MainCog.getErrorEmbed("There's already a round happening. Use .next to progress a round."))
+        if not res:
+            await ctx.send(embed=self.getErrorEmbed("Game was already started."))
             return
-        if res == False:
-            await ctx.send(embed=MainCog.getErrorEmbed("The game hasn't been started. Use .start to start it."))
-            return
-        
+        else:
+            await ctx.send(embed=Embed(
+                title="The games are about to begin.",
+                description=self.game.getRoundFlavor(),
+                color=BORDERBLACK
+            ))
         await ctx.send(embed=Embed(
             title="Round start!",
             description="Use .next to progress a round.",
@@ -250,28 +245,27 @@ class MainCog(commands.Cog):
     async def next(self, ctx: Context):
         """ Progresses a round if one is happening. """
         try:
-            if ctx.message:
-                await ctx.message.delete()
+            await ctx.message.delete()
         except (Forbidden, NotFound):
             pass
         
         res = self.game.next()
         if res == None:
             return self.next()
-        if res == True:
-            await ctx.send(embed=MainCog.getErrorEmbed("The game hasn't been started. Use .start to start it."))
-            return True
         if res == False:
-            await ctx.send(embed=MainCog.getErrorEmbed("Round has ended, use `.round` to start another round."))
+            await ctx.send(embed=MainCog.getErrorEmbed("The game hasn't been started. Use .start to start it."))
             return True
         await ctx.send(embed=MainCog.getResultEmbed(res.getMainChar(), res))
         
         if self.game.isRoundGoing(): return True
         
+        flavor = self.game.getRoundFlavor()
         await ctx.send(embed=Embed(
-            title="Round end (use .round to start a new round)",
+            title="Round end!",
+            description=flavor,
             color=BORDERBLACK
         ))
+        await self.remaining(ctx)
         return False
     
     @commands.command()
@@ -281,6 +275,11 @@ class MainCog(commands.Cog):
         res = await self.next(ctx)
         while res:
             res = await self.next(ctx)
+    
+    @commands.command()
+    async def remaining(self, ctx: Context):
+        """ Gives the number of remaining tributes. """
+        
 
     #
     # Game debugging
@@ -340,40 +339,43 @@ class MainCog(commands.Cog):
     async def listevents(self, ctx: Context):
         """ Lists all Events currently loaded in the game. """
         
-        await ctx.send(embed=MainCog.buildListEmbed(
-            "Loaded Events:",
-            self.game.getSortedEvents(),
-            lambda event: event.getChanceAsStr()
+        await ctx.send(embed=MainCog.buildSingleListEmbed(
+                "Loaded Events:",
+                self.game.getSortedEvents(),
+                lambda event: event.getChance()
         ))
     
     @commands.command(aliases=["loadeditems"])
     async def listitems(self, ctx: Context):
         """ Lists all Items currently loaded in the game. """
         
-        await ctx.send(embed=MainCog.buildListEmbed(
-            "Loaded Items:",
-            self.game.getSortedItems(),
-            lambda item: item.getTagsStr()
-        ))
+        for embed in MainCog.buildListEmbed(
+                "Loaded Items:",
+                self.game.getSortedItems(),
+                lambda item: item.getTagsStr()
+            ):
+            await ctx.send(embed=embed)
     
     @commands.command(aliases=["loadedzones"])
     async def listzones(self, ctx: Context):
         """ Lists all Zones loaded in the game. """
         
-        await ctx.send(embed=MainCog.buildListEmbed(
-            "Loaded Zones:",
-            self.game.getSortedZones(),
-            lambda zone: zone.getConnectionsStr(),
-            False
-        ))
+        for embed in MainCog.buildListEmbed(
+                "Loaded Zones:",
+                self.game.getSortedZones(),
+                lambda zone: zone.getConnectionsStr(),
+                False
+            ):
+            await ctx.send(embed=embed)
     
     @commands.command(aliases=["loadedchars"])
     async def listchars(self, ctx: Context):
         """ Lists all Characters loaded in the game. """
         
-        await ctx.send(embed=MainCog.buildListEmbed(
-            "Loaded Characters:",
-            self.game.getSortedTributes(),
-            lambda char: char.getAliveStr()
-        ))
+        for embed in MainCog.buildListEmbed(
+                "Loaded Characters:",
+                self.game.getSortedTributes(),
+                lambda char: char.getAliveStr()
+            ):
+            await ctx.send(embed=embed)
     

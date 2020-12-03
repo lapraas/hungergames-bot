@@ -23,24 +23,15 @@ stalk continue:
   text: |
     @main continues to stalk @enemy from a safe distance.
 
-find cave:
-  main: alone
+hunger:
+  main: ; tag hungry
   text: |
-    @main finds a cave.
-  
-  -> enter:
-    main: item light light; status spelunking
-    text: |
-      @main takes out their@main &light and enters.
-  -> leave:
-    DEFAULT:
-    text: |
-      It looks very dark in there. They@main decide@main not to go in.
+    @main is starting to get hungry.
 
-USING spelunking: status spelunking, item light light
+cure hunger:
+  main: 
 
-spelunk explore:
-  main:
+hunger kill:
+  main: tag hungry > 10; kill
   text: |
-    @main explores the cave, holding their &light high.
-    While @main explores the cave, their &light flickers for a moment.
+    @main can't go on any longer without food. They@main die@main of starvation.

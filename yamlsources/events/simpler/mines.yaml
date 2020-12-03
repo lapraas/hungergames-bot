@@ -1,0 +1,69 @@
+
+
+USING spelunking: in Caves, item light light
+
+explore:
+  main:
+  text: |
+    @main explores the cave, holding their &light high. It's a lot deeper than they@main thought.
+    While @main explores the cave, their &light flickers for a moment.
+    @main's steps echo across a huge section of the cave. Not even their &light can illuminate the ceiling.
+
+deep:
+  main:
+  text: |
+    While wandering through the depths of the cave, @main comes across a sudden and steep drop. Peering down it, they@main aren't@main sure how deep it is.
+  -> climb:
+    main: item climb climbing
+    text: |
+      They@main use@main their@main &climb to descend the drop. At the bottom is a chest!
+    -> udjat:
+      main: createnamed udjat Udjat Eye, limittotal 1; give udjat
+      text: |
+        @main opens it to find a sort of relic, ornately carved and vividly painted. It seems very important. They@main decide@main to take it with them@main, returning up the steep hole.
+    -> default:
+      main: create loot currency, create loot2 currency; give loot, give loot2
+      text: |
+        @main opens it to find a&loot and a&loot2. They@main take@main both and climb@main back up.
+  -> default:
+    text: |
+      They@main don't@main really have the equipment to go further, so they@main turn back. There's plenty of cave to explore anyway.
+
+gem:
+  main:
+  text: |
+    @main sees something shiny in the wall.
+  -> gem:
+    main: item pick smashing, create loot currency; give loot
+    text: |
+      They@main break it out with their@main &pick, and it turns out to be a&loot!
+  -> other:
+    main: item pick smashing, create loot utility; give loot
+    text: |
+      They@main break it out with their@main &pick, and are surprised to find a&loot of all things!
+  -> default:
+    text: |
+      At least now they@main know@main there's treasure to be had in this cave.
+
+give:
+  main: create dig smashing
+  text: |
+    Something catches @main's eye as they're@main spelunking. There's a&dig lying on the ground!
+  -> leave:
+    main: item theirs smashing
+    text: |
+      They@main already have a&theirs, though. They leave it behind.
+  -> default:
+    main: ; give dig
+    text: |
+      It's definitely a useful tool to have in a cave. They@main take@main it with them@main.
+
+give climbing:
+  main: create climb climbing; give climb
+  text: |
+    @main finds a&climb as they're@main wandering through the cave. They@main decide@main to take it with them@main.
+
+leave:
+  main: ; move The Dome
+  text: |
+    @main finds their way back out of the Caves.

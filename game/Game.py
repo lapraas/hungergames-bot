@@ -22,6 +22,7 @@ class Game:
         self.sortedZones = self.map.getSortedZones()
         
         self.inProgress = False
+        self.rounds = 0
         
         self.acted: list[Character] = []
         self.toAct: list[Character] = []
@@ -49,6 +50,12 @@ class Game:
     
     def getSortedZones(self):
         return self.sortedZones
+    
+    def getRoundFlavor(self):
+        if self.rounds == 0:
+            return self.map.flavor["start"]
+        else:
+            return self.map.flavor.get(self.rounds)
     
     def triggerByName(self, charName, eventName) -> Union[str, Result]:
         char = self.getTributeByName(charName)
@@ -88,6 +95,18 @@ class Game:
                 totalChance += event.getChance()
                 possibleEvents.append(event)
         
+        print(f"Character: {char}")
+        print(f"  alive:\t{char.alive}")
+        print(f"  age:\t{char.age}")
+        print(f"  location:\t{char.location}")
+        print(f"  status:\t{char.status}")
+        print(f"  tags:")
+        [print(f"    {tag}") for tag in char.tags]
+        print(f"  inventory:\t{char.items}")
+        print(f"  alliance:\t{char.alliance}")
+        print(f"Possible events: {possibleEvents}")
+        print(f"Default event: {defaultEvent}\n")
+        
         if not possibleEvents:
             if defaultEvent:
                 return defaultEvent
@@ -122,6 +141,7 @@ class Game:
         """ Starts a game round. Increments the age of all tributes. """
         if self.toAct: return True
         if not self.inProgress: return False
+        self.rounds += 1
         
         self.acted = []
         self.toAct = []
@@ -133,8 +153,9 @@ class Game:
         """ Progresses a game round.
             Chooses a random tribute that hasn't acted and triggers an Event for them. """
         
-        if not self.toAct: return True
         if not self.inProgress: return False
+        
+        if not self.toAct: self.round()
         
         acting = choice(self.toAct)
         self.toAct.remove(acting)
@@ -144,5 +165,5 @@ class Game:
         return result
     
     def isRoundGoing(self) -> bool:
-        return len(self.toAct) != 0
+        return len(self.toAct) > 0
         

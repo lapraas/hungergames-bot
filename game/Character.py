@@ -12,7 +12,7 @@ class Tag:
     def __init__(self, name: str, lasts: int, forever: bool=False):
         self.name = name
         self.age = lasts
-        self.forever = False
+        self.forever = forever
     
     def __str__(self):
         return f"Tag {self.name} ({self.age})"
@@ -55,7 +55,13 @@ class Character:
             "they've": self.subj + ("'ve" if self.plural else "'s"),
             "they'll": self.subj + "'ll",
             "weren't": "weren't" if self.plural else "wasn't",
-            "aren't": "aren't" if self.plural else "isn't"
+            "haven't": "haven't" if self.plural else "hasn't",
+            "aren't": "aren't" if self.plural else "isn't",
+            "don't": "don't" if self.plural else "doesn't",
+            "were": "were" if self.plural else "was",
+            "are": "are" if self.plural else "is",
+            
+            "put": "put" if self.plural else "puts",
         }
         
         self.alive: bool = True
@@ -113,6 +119,9 @@ class Character:
         if self.isAlive():
             self.roundsSurvived += 1
         
+        if self.status:
+            self.status.changeAge()
+        
         toRemove: list[Tag] = []
         for tag in self.tags:
             tag.changeAge()
@@ -167,7 +176,7 @@ class Character:
                 if not self.plural:
                     toRet = p.plural(tag)
             if tag == None or tag[0].isupper():
-                return toRet.capitalize()
+                return toRet[0].capitalize() + toRet[1:]
         return toRet
     
     # Location

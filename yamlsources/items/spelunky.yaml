@@ -1,5 +1,5 @@
 
-mattock: weapon melee smashing
+mattock: weapon utility melee smashing
 boomerang: weapon ranged
 bow: weapon ranged
 pair of spike shoes: weapon melee
@@ -8,12 +8,12 @@ rock: weapon melee
 shield: protect
 
 bomb: utility weapon
-rope: utility
+rope: utility climbing
 teleporter: utility
-cape: utility
+cape: utility climbing
 set of spectacles: utility
 compass: utility
-pair of climbing gloves: utility
+pair of climbing gloves: utility climbing
 
 gold: currency
 ruby: currency

@@ -1,5 +1,6 @@
 
 from __future__ import annotations
+from typing import Union
 from game.Item import Item
 from game.Trove import Trove
 from random import choice
@@ -17,6 +18,7 @@ class Zone:
         self.connections.append(zone)
     
     def getRandomConnection(self):
+        if not self.connections: return self
         return choice(self.connections)
     
     def getConnectionStr(self):
@@ -25,7 +27,9 @@ class Zone:
                 
 
 class Map:
-    def __init__(self):
+    def __init__(self, flavor: dict[Union[str, int], str]):
+        self.flavor = flavor
+        
         self.zones: dict[str, Zone] = {}
         self.troves: dict[str, Trove] = {}
         self.startingZone: Zone = None

@@ -2,3 +2,8 @@
 flashlight: light utility
 torch: light utility
 headlamp: light utility
+lantern: light utility
+floor lamp: light weapon utility melee
+
+hammer: weapon utility melee smashing
+shovel: weapon utility melee smashing digging

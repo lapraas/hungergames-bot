@@ -1,0 +1,55 @@
+
+USING start: round = 1
+
+start loot:
+  main: luck 2
+  text: |
+    @main makes a break for the Cornucopia.
+    @main runs to the Cornucopia.
+    @main takes the risk and runs up to the Cornucopia.
+  -> take:
+    main: loot loot Cornucopia; give loot
+    text: |
+      They@main find@main a&loot.
+      They@main grab@main a&loot.
+    -> another:
+      main: loot loot2 Cornucopia; give loot2
+      text: |
+        @main gets feisty and goes for another item - a&loot2. Well-prepared, they@main run@main off into the dungeon.
+    -> leave:
+      main:
+      text: |
+        @main runs away, feeling a bit more prepared.
+  -> default:
+    main:
+    text: |
+      There wasn't anything there! @main turns and runs before anything else can happen to them.
+
+start run:
+  main:
+  text: |
+    @main immediately turns tail and runs into the dungeon.
+    @main runs away from the Cornucopia.
+    @main decides going for the Cornucopia is too risky, instead venturing straight into the mystery dungeon.
+    @main runs away - they@main don't@main need the Cornucopia's help.
+
+start dead:
+  main: ; kill
+  enemy: enemy main, item item ANY
+  text: |
+    @main runs up to the Cornucopia but meets @enemy, who beats them to death with a&item.
+    @main makes a break for the Cornucopia, but @enemy beat them there - @main tries to run away, but @enemy is too quick.
+
+USING none:
+
+normal loot:
+  main: round > 3
+  text: |
+    @main finds themself@main near the Cornucopia again. They@main decide@main to check it out.
+  -> loot:
+    main: loot loot Cornucopia; give loot
+    text: |
+      There's still stuff here! They@main take a&loot and leave@main before they@main overstay@main their@main welcome.
+  -> default:
+    text: |
+      It looks like everything's been looted. They@main leave@main the Cornucopia behind.

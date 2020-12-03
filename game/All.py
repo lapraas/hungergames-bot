@@ -208,7 +208,9 @@ class All:
     ###
     
     def mapFromYaml(self, dotsName: str, yaml: dict[str, dict[str, Union[str, dict[str, Union[str, int]]]]]) -> None:
-        map = Map()
+        flavor = yaml.get("flavor", {})
+        
+        map = Map(flavor)
         zones = yaml.get("zones")
         if not isinstance(zones, dict): raise LoadException(f"`zones` value in Map was not a dict (got: {zones})")
         
@@ -268,7 +270,7 @@ class All:
                 text = [t.strip() for t in newlines.split(val.strip())]
             elif key.startswith("->"):
                 if not isinstance(val, dict): raise LoadException(f"`->` (sub) value in event {name} was not a dict (got: {val})")
-                subEvents.append(All.eventFromYamlNew(name + key, val, defaultReq))
+                subEvents.append(All.eventFromYamlNew(name + "." + key[3:], val, defaultReq))
             else:
                 if not val: val = ""
                 if not any([isinstance(val, str), isinstance(val, int)]): raise LoadException(f"`{key}` value in event {name} was not a string or int (got: {val})")

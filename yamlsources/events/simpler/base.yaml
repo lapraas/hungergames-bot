@@ -1,0 +1,40 @@
+
+sponsor:
+  main: create present ANY; give present
+  text: |
+    @main recieves a package from an unknown sponsor. They@main open@main it to find a&present!
+    @main comes across a package and opens it to find a&present. A sponsor must be looking out for them.
+
+ally:
+  main: alone
+  enemy: enemy main, alone
+  text: |
+    @main and @enemy spot each other from a distance. @main calls out, not wanting a fight.
+  -> success:
+    main: ; ally enemy
+    text: |
+      After a shouted conversation, the two decide to team up.
+      They approach each other, keeping their distance, and talk. @main grows to like @enemy.
+  -> fail:
+    text: |
+      @enemy runs away anyway, leaving @main alone.
+      @enemy approaches them@main, and @main doesn't want to take the chance. They@main run away.
+
+find cave:
+  main: alone
+  text: |
+    @main finds a cave.
+  -> enter:
+    main: item light light; move Caves
+    text: |
+      @main takes out their@main &light and enters.
+  -> default:
+    text: |
+      It looks very dark in there. They@main decide@main not to go in.
+
+hunt:
+  main: needs food, create food food; give food
+  text: |
+    @main hunts for food. After a while, they@main end up with a&food.
+
+

@@ -20,18 +20,22 @@ RARITIES = {
 }
 
 class Event:
-    def __init__(self, name: str, text: list[str], checkNamesToArgLists: dict[str, list[list[str]]], effectNamesToArgLists: dict[str, list[list[str]]], sub: list[Event]):
+    def __init__(self, name: str, texts: list[str], checkNamesToArgLists: dict[str, list[list[str]]], effectNamesToArgLists: dict[str, list[list[str]]], sub: list[Event]):
         self.name = name
-        self.texts = text
+        self.texts = texts
         self.checkSuites = [CheckSuite(checkName, checkNamesToArgLists[checkName]) for checkName in checkNamesToArgLists]
         self.effectSuites = [EffectSuite(effectName, effectNamesToArgLists[effectName]) for effectName in effectNamesToArgLists]
         self.sub = sub
-        self.triggerCts: dict[Character, int] = {}
         
-        self.chance = 100
+        self.triggerCts: dict[Character, int] = {}
+        self.state = State(self.triggerCts)
+        
+        self.baseChance = 100
+        if self.name.endswith("default"):
+            self.baseChance = 0
     
     def __repr__(self):
-        return f"Event {self.name}"
+        return f"Event \"{self.name}\""
     
     def exception(self, text):
         return Exception(f"In event {self.name}: ", text)
@@ -40,13 +44,13 @@ class Event:
         return self.name
     
     def getChance(self):
-        return self.chance
-    
-    def getChanceAsStr(self):
-        return self.chance
+        if not self.state:
+            return self.baseChance
+        return self.state.chance
         
     def load(self, valids: Valids, isSub: bool=False):
         try:
+            print(self.name)
             if self.checkSuites:
                 mainCheckSuite = self.checkSuites[0]
                 mainCheckSuite.load(valids, isSub)
@@ -71,7 +75,7 @@ class Event:
             Prepares this Event to be triggered, assigning Characters to the Event State if they match.
             If any of the requirements aren't met, returns False, otherwise returns True.
             """
-        self.state = State(self.triggerCts) if not state else state
+        self.state = State(self.triggerCts, self.baseChance) if not state else state.sub(self.triggerCts, self.baseChance)
         
         if not self.state.doesCharExist(mainChar):
             return self.prepareBase(mainChar, otherChars)

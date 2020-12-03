@@ -1,0 +1,243 @@
+
+#
+# Passives
+#
+
+passive:
+  main:
+  text: |
+    @main wanders through the dungeon aimlessly.
+    @main really hopes they@main can find something of use soon.
+    @main thinks about home.
+    @main worries they'll step on a trap.
+    @main seeks out other tributes.
+
+passive enemy:
+  main:
+  enemy:
+  text: |
+    @main enters a room and stumbles upon @enemy, who promptly runs away.
+    @main and @enemy find each other in a room. @main scares them@enemy away.
+    @main and @enemy find each other in a room. @main runs away before anything bad can happen.
+    @main comes across @enemy sneaking through a corridor. @main decides to leave them@enemy alone.
+    @main feels like they're@main being watched - they@main whip@main around just in time to see @enemy disappear around a corner.
+
+passive move:
+  main: item move move damage
+  text: |
+    @main decides to train using their@main &move.
+    @main decides to practice their@main &move.
+
+passive move 2:
+  main: item move move passive, limit 1
+  text: |
+    @main uses their@main &move. They@main feel@main a bit safer.
+
+passive item:
+  main: item any utility
+  text: |
+    @main admires the &any they collected.
+    @main is glad they@main picked up their@main &any.
+
+#
+# Item uses
+#
+
+use tm:
+  main: luck 100, itemnamed tm TM Disc, create learned move, createnamed used Used TM; consume tm, give learned, give used
+  text: |
+    @main activates their@main &tm. They@main find@main themself@main in a virtual box, and an odd voice teaches them@main how to use &learned!
+
+use trawl:
+  main: item trawl trawl, create item utility; consume trawl, give item
+  text: |
+    @main uses their@main &trawl. They@main find a&item!
+
+#
+# Item finds
+#
+
+find item:
+  main: create item utility; give item
+  text: |
+    @main picks up a&item on the ground.
+    @main is lucky to find a&item lying on the ground.
+    @main finds a&item and takes it with them@main.
+    @main almost steps on a&item, stopping to pick it up.
+
+find item berry:
+  main: create berry berry; give berry
+  text: |
+    @main finds a&berry on the ground. They@main put@main it into their@main bag carefully, making sure it doesn't get squished.
+
+find item medicine:
+  main: create med medicine; give med
+  text: |
+    @main isn't too sure what a&med is doing in a mystery dungeon, but they@main take@main it regardless.
+
+find item tm:
+  main: needs move, createnamed tm TM Disc; give tm
+  text: |
+    @main finds a&tm on the ground! They@main keep@main it with them@main, planning to use it later.
+
+#
+# Afflict
+#
+
+hungry:
+  main: tag !hungry, round > 5; tag hungry
+  text: |
+    @main is starting to get hungry.
+    All the wandering around is starting to get to @main's belly.
+
+#
+# Traps
+#
+USING later 3: round > 3
+
+trap:
+  main: luck 2
+  text: |
+    @main steps on a trap!
+  -> injure:
+    main: tag !injured; tag injured
+    text: |
+      Spikes shoot out of the ground under @main, injuring them.
+      @main is sent flying by a gust trap and hits the dungeon wall hard.
+
+  -> hungry:
+    main: tag !hungry; tag hungry
+    text: |
+      @main activates a hunger trap! Their@main belly starts to feel empty.
+
+  -> poison:
+    main: tag !poisoned; tag poisoned
+    text: |
+      Poison spikes spring from the ground under @main!
+      @main activates a poison trap!
+
+  -> sleep:
+    main: ; status sleeping
+    text: |
+      @main activates a trap and begins to feel very drowsy. They@main can't help but fall asleep on the floor.
+
+  -> warp:
+    main:
+    text: |
+      @main activates a warp trap! Now they@main have@main no idea where they@main are@main...
+      @main all of a sudden finds themself@main looking at a new wall. They@main must've activated a warp trap somewhere.
+    -> allied:
+      main: allied; leave
+      text: |
+        They@main frantically look@main around for their@main friends, but they're nowhere to be seen. @main's heart drops.
+        The warp trap didn't work on their@main friends. Terribly alone, @main continues exploring the dungeon.
+    -> default:
+      text: |
+        Luckily for them@main, they@main were@main alone. They@main continue@main into the new part of the dungeon.
+
+  -> trip:
+    main: item item ANY; consume item
+    text: |
+      @main steps on a trip trap! They@main drop@main their@main &item and it's lost in the trap's clutches.
+
+#
+# Hunger
+#
+USING hungry: luck 3, tag hungry
+
+hungry passive:
+  main:
+  text: |
+    @main's stomach rumbles as they@main explore.
+    @main could really go for an apple right about now.
+
+hungry passive 2:
+  main: needs food
+  text: |
+    @main really wishes they@main had food right now.
+    @main is ready to starve...
+
+hungry passive 3:
+  main: tag hungry > 5, needs food
+  text: |
+    @main's health bar begins blinking yellow! They@main really need@main to find something to eat...
+
+hungry miracle:
+  main: needs food, create food food; untag hungry
+  text: |
+    @main is lucky to come across the exact thing they@main need@main - a&food. They@main eat@main it and it's the best thing they've@main ever tasted. They@main continue@main exploring with a full stomach.
+    @main ravenously dives at a&food on the ground and devours it. They@main regret@main eating it so quickly, but their@main hunger is sated.
+
+hungry cure:
+  main: item food food; untag hungry
+  text: |
+    @main is hungry. They@main decide@main to eat their@main &food and finish@main feeling nice and full.
+    @main decides it's time for a snack - they're@main starving. They@main take@main out their@main &food.
+
+hungry kill:
+  main: tag hungry > 7; kill
+  text: |
+    @main can't go any longer without food.
+    @main dies of starvation.
+
+#
+# Poison
+#
+USING poison: luck 3, tag poisoned
+
+poison passive:
+  main:
+  text: |
+    @main feels very sick. They@main decide@main to sit down for a while.
+    The poison is getting to @main... They@main keep@main trudging through the dungeon regardless.
+
+poison passive 2:
+  main: tag poison > 5;
+  text: |
+    @main feels faint. But if they@main fall@main asleep now, they@main may never wake back up...
+
+poison miracle:
+  main: needs cure, create cure cure; untag poisoned
+  text: |
+    @main is lucky to come across the exact thing they@main need@main - a&cure. They@main use@main it and instantly feel better.
+
+poison cure:
+  main: item cure cure; untag poisoned
+  text: |
+    @main uses their &cure to cure their poison.
+
+poison kill:
+  main: tag poison > 9; kill
+  text: |
+    @main dies to poison.
+    @main feels too weak to continue.
+
+#
+# Sleeping
+#
+USING sleeping: status sleeping
+
+sleeping passive:
+  main:
+  text: |
+    @main is fast asleep.
+    @main is resting.
+    @main lies on the cold dungeon floor, asleep.
+
+sleeping passive 2:
+  main: status sleeping > 2
+  text: |
+    @main has been asleep for a while now...
+
+sleeping cure:
+  main: item wake wake; consume wake
+  text: |
+    While they're@main sleeping, their@main &wake spontaneously wakes them up.
+    @main's &wake falls on their head while they're sleeping and wakes them up.
+
+sleeping wake:
+  main: status sleeping > 2; clear
+  text: |
+    @main wakes up, feeling refreshed.
+    @main wakes up and wonders where they are.
+    @main wakes up in a cold sweat.

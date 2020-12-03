@@ -25,8 +25,6 @@ class Item:
                 toRet = p.a(self.name)
             elif tag:
                 return None
-            if tag[0].isupper():
-                toRet = toRet.capitalize()
         return toRet
         
     def hasTag(self, tag: str) -> bool:
@@ -37,6 +35,7 @@ class Item:
         return tag in self.tags
     
     def hasAllTags(self, tags: list[str]) -> bool:
+        if "ANY" in tags: return True
         return all([self.hasTag(tag) for tag in tags])
     
     def copy(self) -> Item:

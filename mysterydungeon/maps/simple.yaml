@@ -1,0 +1,15 @@
+
+zones:
+  The Dungeon:
+
+troves:
+  Cornucopia:
+    count: 12
+    pool: utility, food
+
+flavor:
+  start: |
+    Welcome to the Hunger Games! In this arena, Tributes will find themselves wandering through a vast yet tight mystery dungeon with sharp corridors and small rooms. If they're lucky, they may find a slew of necessities such as berries, TMs, or more to help them in their conquest. If they're unlucky, though, the dungeon has many wicked traps to set upon them. As is tradition, the center of the dungeon has been made into a Cornucopia with starting supplies for the Tributes to fight over. And of course, the last Tribute alive wins the Hunger Games.
+    May the odds forever be in your favor.
+  1: |
+    The Tributes disperse throughout the dungeon.

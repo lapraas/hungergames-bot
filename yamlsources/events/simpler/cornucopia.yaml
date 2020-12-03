@@ -22,5 +22,21 @@ hide start:
   text: |
     @main decides to wait until the chaos has cleared from the Cornucopia.
 
-USING none:
+USING dome: in The Dome
 
+hiding loot:
+  main: tag hiding, loot loot Cornucopia; give loot, tag running 2
+  text: |
+    @main sneaks back to the Cornucopia. Luckily for them@main there's still stuff there, and they@main take@main a &loot before running away.
+
+normal loot:
+  main: round > 3
+  text: |
+    @main finds themselves@main near the Cornucopia again. They@main decide@main to check it out.
+  -> loot:
+    main: loot loot Cornucopia; give loot
+    text: |
+      There's still stuff here! They@main take a&loot and leave@main before they@main overstay@main their@main welcome.
+  -> default:
+    text: |
+      It looks like everything's been looted. They@main leave@main the Cornucopia behind.
